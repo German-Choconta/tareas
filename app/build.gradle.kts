@@ -56,6 +56,11 @@ dependencies {
     implementation("androidx.room3:room3-runtime:3.0.1")
     implementation("androidx.sqlite:sqlite-bundled:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    // Room 3.0.1 migration tooling uses kotlinx.serialization 1.8.1. Keep the
+    // app/debug runtime on the same version so androidTest consistent resolution
+    // does not pin the migration helper to lifecycle's older transitive 1.7.3.
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
     ksp("androidx.room3:room3-compiler:3.0.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
@@ -65,9 +70,6 @@ dependencies {
 
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.room3:room3-testing:3.0.1")
-    // Room 3.0.1 migration tooling is compiled/tested against serialization 1.8.1.
-    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1")
-    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
     androidTestImplementation("androidx.test:core:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test:runner:1.7.0")

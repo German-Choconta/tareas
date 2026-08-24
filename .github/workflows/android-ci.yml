@@ -26,6 +26,8 @@ jobs:
           gradle-version: '9.5.0'
       - name: Unit tests
         run: gradle testDebugUnitTest --stacktrace
+      - name: Verify Room schema is committed
+        run: git diff --exit-code -- app/schemas
       - name: Upload generated Room schema
         uses: actions/upload-artifact@v4
         with:

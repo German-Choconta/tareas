@@ -115,6 +115,35 @@ class GymTrackerDatabaseTest {
     }
 
     @Test
+    fun routineExercisesAreReturnedInConfiguredOrder() = runTest {
+        val routine = RoutineEntity(id = "routine-order", name = "Ordered", position = 0)
+        val firstExercise = ExerciseEntity(id = "exercise-first", name = "First")
+        val secondExercise = ExerciseEntity(id = "exercise-second", name = "Second")
+        db.routineDao().upsert(routine)
+        db.exerciseDao().upsert(firstExercise)
+        db.exerciseDao().upsert(secondExercise)
+
+        fun routineExercise(id: String, exerciseId: String, position: Int) =
+            RoutineExerciseEntity(
+                id = id,
+                routineId = routine.id,
+                exerciseId = exerciseId,
+                position = position,
+                targetSetCount = 3,
+                repMin = 8,
+                repMax = 12,
+                restSeconds = 90,
+                loadIncrementGrams = 2_500,
+            )
+
+        db.routineDao().upsertExercise(routineExercise("re-second", secondExercise.id, 1))
+        db.routineDao().upsertExercise(routineExercise("re-first", firstExercise.id, 0))
+
+        val ordered = db.routineDao().observeExercises(routine.id).first()
+        assertEquals(listOf(firstExercise.id, secondExercise.id), ordered.map { it.exerciseId })
+    }
+
+    @Test
     fun previousAnyWorkoutAndSameRoutineResolveDifferentSessions() = runTest {
         val exercise = ExerciseEntity(id = "exercise-row", name = "Row")
         db.exerciseDao().upsert(exercise)
@@ -187,5 +216,22 @@ class GymTrackerDatabaseTest {
         assertTrue(db.exerciseDao().getById(exercise.id)!!.archived)
         assertNotNull(db.workoutDao().getWorkout(workout.id))
         assertEquals(1, db.workoutDao().getSets(workoutExercise.id).size)
+    }
+
+    @Test
+    fun fileDatabaseSurvivesCloseAndReopen() = runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        context.deleteDatabase(GymTrackerDatabase.DATABASE_NAME)
+
+        var fileDb = GymTrackerDatabase.build(context)
+        fileDb.exerciseDao().upsert(ExerciseEntity(id = "persisted", name = "Persisted exercise"))
+        fileDb.close()
+
+        fileDb = GymTrackerDatabase.build(context)
+        val restored = fileDb.exerciseDao().getById("persisted")
+        fileDb.close()
+        context.deleteDatabase(GymTrackerDatabase.DATABASE_NAME)
+
+        assertEquals("Persisted exercise", restored?.name)
     }
 }

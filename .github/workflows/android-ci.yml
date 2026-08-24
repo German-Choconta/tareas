@@ -26,6 +26,13 @@ jobs:
           gradle-version: '9.5.0'
       - name: Unit tests
         run: gradle testDebugUnitTest --stacktrace
+      - name: Upload generated Room schema
+        uses: actions/upload-artifact@v4
+        with:
+          name: gymtracker-room-schema
+          path: app/schemas/**/*.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -43,13 +50,6 @@ jobs:
         run: gradle lintDebug --stacktrace
       - name: Assemble debug APK
         run: gradle assembleDebug --stacktrace
-      - name: Upload Room schema
-        uses: actions/upload-artifact@v4
-        with:
-          name: gymtracker-room-schema
-          path: app/schemas/**/*.json
-          if-no-files-found: error
-          retention-days: 14
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:

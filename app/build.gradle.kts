@@ -65,6 +65,9 @@ dependencies {
 
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.room3:room3-testing:3.0.1")
+    // Room 3.0.1 migration tooling is compiled/tested against serialization 1.8.1.
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1")
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
     androidTestImplementation("androidx.test:core:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test:runner:1.7.0")

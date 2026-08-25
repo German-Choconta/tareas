@@ -119,7 +119,9 @@ class PersonalRecordEngineTest {
             fact("c", 2_000, 100_000, 10, workoutId = "session-b"),
         )
         val records = PersonalRecordEngine.calculate(facts)
-        val expected = BigInteger.valueOf(hugeLoad).multiply(BigInteger.TEN).multiply(BigInteger.TWO)
+        val expected = BigInteger.valueOf(hugeLoad)
+            .multiply(BigInteger.TEN)
+            .multiply(BigInteger.valueOf(2L))
 
         assertEquals("session-a", records.highestSessionVolume?.workoutId)
         assertEquals(expected, records.highestSessionVolume?.volumeGramReps)

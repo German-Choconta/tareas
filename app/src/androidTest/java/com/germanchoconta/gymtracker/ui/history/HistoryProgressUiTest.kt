@@ -12,7 +12,6 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.germanchoconta.gymtracker.domain.FrequencyBucketSize
 import com.germanchoconta.gymtracker.domain.ProgressMetric
-import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -71,9 +70,7 @@ class HistoryProgressUiTest {
 
         composeRule.onNodeWithText("Sin datos para esta vista").assertTextEquals("Sin datos para esta vista")
         composeRule.onNodeWithText("Volumen").performClick()
-        composeRule.runOnIdle {
-            assertEquals(ProgressMetric.VOLUME, state.metric)
-            assertEquals(ProgressMetric.VOLUME, state.chart.metric)
-        }
+        composeRule.onNodeWithText("Volumen").assertIsSelected()
+        composeRule.onNodeWithText("Sin datos para esta vista").assertTextEquals("Sin datos para esta vista")
     }
 }

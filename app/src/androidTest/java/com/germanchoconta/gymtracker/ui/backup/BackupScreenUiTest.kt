@@ -4,11 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -56,43 +52,21 @@ class BackupScreenUiTest {
     }
 
     @Test
-    fun validatedPreviewShowsCountsAndRequiresSeparateAccessibleConfirmation() {
-        var state by mutableStateOf(
-            BackupUiState(
-                preview = BackupPreview(
-                    metadata = BackupMetadata(
-                        formatVersion = 1,
-                        generatedAtEpochMillis = 10_000,
-                        appVersion = "synthetic-ui",
-                        databaseSchemaVersion = 2,
-                        payloadSha256 = "0".repeat(64),
-                    ),
-                    exerciseCount = 7,
-                    routineCount = 3,
-                    workoutCount = 11,
-                    setCount = 42,
-                    earliestWorkoutStartedAt = 1_000,
-                    latestWorkoutStartedAt = 9_000,
-                    hasActiveWorkout = true,
-                ),
-            ),
-        )
+    fun validatedPreviewShowsCountsAndOnlyRequestsDestructiveConfirmation() {
+        val preview = syntheticPreview()
+        var replaceRequests = 0
         var confirmations = 0
 
         composeRule.setContent {
             MaterialTheme {
                 BackupScreenContent(
-                    state = state,
+                    state = BackupUiState(preview = preview),
                     onBack = {},
                     onExportBackup = {},
                     onExportCsv = {},
                     onImport = {},
-                    onRequestReplace = {
-                        state = state.copy(replaceConfirmationVisible = true)
-                    },
-                    onDismissReplace = {
-                        state = state.copy(replaceConfirmationVisible = false)
-                    },
+                    onRequestReplace = { replaceRequests += 1 },
+                    onDismissReplace = {},
                     onConfirmReplace = { confirmations += 1 },
                     onDiscardPreview = {},
                     onClearFeedback = {},
@@ -106,14 +80,41 @@ class BackupScreenUiTest {
         composeRule.onNodeWithText("Workouts: 11").assertExists()
         composeRule.onNodeWithText("Sets: 42").assertExists()
         composeRule.onNodeWithText("Workout activo incluido: sí").assertExists()
+        assertEquals(0, replaceRequests)
         assertEquals(0, confirmations)
 
         composeRule.onNodeWithText("Revisar reemplazo").performClick()
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule.onAllNodesWithText("Reemplazar todos los datos locales")
-                .fetchSemanticsNodes().isNotEmpty()
+
+        assertEquals(1, replaceRequests)
+        assertEquals(0, confirmations)
+    }
+
+    @Test
+    fun destructiveReplaceDialogHasSeparateAccessibleConfirmation() {
+        var confirmations = 0
+
+        composeRule.setContent {
+            MaterialTheme {
+                BackupScreenContent(
+                    state = BackupUiState(
+                        preview = syntheticPreview(),
+                        replaceConfirmationVisible = true,
+                    ),
+                    onBack = {},
+                    onExportBackup = {},
+                    onExportCsv = {},
+                    onImport = {},
+                    onRequestReplace = {},
+                    onDismissReplace = {},
+                    onConfirmReplace = { confirmations += 1 },
+                    onDiscardPreview = {},
+                    onClearFeedback = {},
+                )
+            }
         }
+
         composeRule.onNodeWithText("Reemplazar todos los datos locales").assertExists()
+        assertEquals(0, confirmations)
         composeRule.onNodeWithContentDescription(
             "Confirmar reemplazo destructivo de todos los datos locales",
         ).performClick()
@@ -151,4 +152,21 @@ class BackupScreenUiTest {
         assertEquals(1, csvExports)
         assertEquals(1, imports)
     }
+
+    private fun syntheticPreview() = BackupPreview(
+        metadata = BackupMetadata(
+            formatVersion = 1,
+            generatedAtEpochMillis = 10_000,
+            appVersion = "synthetic-ui",
+            databaseSchemaVersion = 2,
+            payloadSha256 = "0".repeat(64),
+        ),
+        exerciseCount = 7,
+        routineCount = 3,
+        workoutCount = 11,
+        setCount = 42,
+        earliestWorkoutStartedAt = 1_000,
+        latestWorkoutStartedAt = 9_000,
+        hasActiveWorkout = true,
+    )
 }

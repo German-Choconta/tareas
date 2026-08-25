@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +63,7 @@ fun GymTrackerApp(
     val historyState by historyViewModel.uiState.collectAsStateWithLifecycle()
     var appDestinationName by rememberSaveable { mutableStateOf(AppDestination.EXERCISES.name) }
     val appDestination = AppDestination.valueOf(appDestinationName)
+    val topLevelStateHolder = rememberSaveableStateHolder()
 
     when {
         workoutState.loading -> Box(
@@ -133,24 +135,25 @@ fun GymTrackerApp(
             },
         ) { outerPadding ->
             Box(modifier = Modifier.fillMaxSize().padding(outerPadding)) {
-                when (appDestination) {
-                    AppDestination.EXERCISES -> ExerciseTopLevelScreen(
-                        state = exerciseState,
-                        onQueryChange = exerciseViewModel::updateQuery,
-                        onCreateExercise = exerciseViewModel::startCreate,
-                        onEditExercise = exerciseViewModel::startEdit,
-                    )
-                    AppDestination.ROUTINES -> RoutineTopLevelScreen(
-                        state = routineState,
-                        onCreateRoutine = routineViewModel::startCreate,
-                        onEditRoutine = routineViewModel::startEdit,
-                        onStartRoutine = workoutViewModel::startRoutine,
-                    )
-                    AppDestination.HISTORY -> HistoryScreen(
-                        state = historyState,
-                        viewModel = historyViewModel,
-                        onBackToApp = { appDestinationName = AppDestination.EXERCISES.name },
-                    )
+                topLevelStateHolder.SaveableStateProvider(appDestination.name) {
+                    when (appDestination) {
+                        AppDestination.EXERCISES -> ExerciseTopLevelScreen(
+                            state = exerciseState,
+                            onQueryChange = exerciseViewModel::updateQuery,
+                            onCreateExercise = exerciseViewModel::startCreate,
+                            onEditExercise = exerciseViewModel::startEdit,
+                        )
+                        AppDestination.ROUTINES -> RoutineTopLevelScreen(
+                            state = routineState,
+                            onCreateRoutine = routineViewModel::startCreate,
+                            onEditRoutine = routineViewModel::startEdit,
+                            onStartRoutine = workoutViewModel::startRoutine,
+                        )
+                        AppDestination.HISTORY -> HistoryScreen(
+                            state = historyState,
+                            viewModel = historyViewModel,
+                        )
+                    }
                 }
             }
         }

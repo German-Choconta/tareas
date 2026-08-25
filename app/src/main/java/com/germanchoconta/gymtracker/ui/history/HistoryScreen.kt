@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,9 +35,10 @@ import com.germanchoconta.gymtracker.data.local.HistoryExerciseRow
 fun HistoryScreen(
     state: HistoryUiState,
     viewModel: HistoryViewModel,
+    onManageData: () -> Unit = {},
 ) {
     if (state.selectedExerciseId == null) {
-        HistoryLibrary(state.exercises, viewModel::selectExercise)
+        HistoryLibrary(state.exercises, viewModel::selectExercise, onManageData)
     } else {
         HistoryDetail(state, viewModel, viewModel::closeExercise)
     }
@@ -47,10 +49,18 @@ fun HistoryScreen(
 private fun HistoryLibrary(
     exercises: List<HistoryExerciseRow>,
     onExerciseClick: (String) -> Unit,
+    onManageData: () -> Unit,
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Historial") })
+            TopAppBar(
+                title = { Text("Historial") },
+                actions = {
+                    IconButton(onClick = onManageData) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Gestionar backup y exportaciones")
+                    }
+                },
+            )
         },
     ) { padding ->
         if (exercises.isEmpty()) {

@@ -5,12 +5,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.germanchoconta.gymtracker.data.local.PreviousReferenceModes
@@ -31,8 +35,10 @@ class V1HardeningUiTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    @OptIn(ExperimentalTestApi::class)
     @Test
-    fun topLevelCreateActionsExposeSpecificTalkBackLabels() {
+    fun topLevelCreateActionsExposeSpecificTalkBackLabelsAndPassAccessibilityChecks() {
+        composeRule.enableAccessibilityChecks()
         var exerciseCreates = 0
         composeRule.setContent {
             MaterialTheme {
@@ -45,6 +51,7 @@ class V1HardeningUiTest {
             }
         }
 
+        composeRule.onRoot().tryPerformAccessibilityChecks()
         composeRule.onNodeWithContentDescription("Crear ejercicio").performClick()
         composeRule.waitForIdle()
         assertEquals(1, exerciseCreates)
@@ -61,13 +68,16 @@ class V1HardeningUiTest {
             }
         }
 
+        composeRule.onRoot().tryPerformAccessibilityChecks()
         composeRule.onNodeWithContentDescription("Crear rutina").performClick()
         composeRule.waitForIdle()
         assertEquals(1, routineCreates)
     }
 
+    @OptIn(ExperimentalTestApi::class)
     @Test
-    fun narrowWorkoutViewportKeepsCriticalSetInputsReachable() {
+    fun narrowWorkoutViewportKeepsCriticalSetInputsReachableAndAccessible() {
+        composeRule.enableAccessibilityChecks()
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.width(320.dp).height(640.dp)) {
@@ -94,6 +104,7 @@ class V1HardeningUiTest {
             }
         }
 
+        composeRule.onRoot().tryPerformAccessibilityChecks()
         composeRule.onNodeWithText("Carga (kg)").assertIsDisplayed()
         composeRule.onNodeWithText("Reps").assertIsDisplayed()
         composeRule.onNodeWithText("RIR").assertIsDisplayed()

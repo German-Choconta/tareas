@@ -10,11 +10,9 @@ import com.germanchoconta.gymtracker.ui.GymTrackerApp
 import com.germanchoconta.gymtracker.ui.theme.GymTrackerTheme
 
 class MainActivity : ComponentActivity() {
-    private lateinit var database: GymTrackerDatabase
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        database = GymTrackerDatabase.build(applicationContext)
+        val database = GymTrackerDatabase.build(applicationContext)
         val exerciseRepository = ExerciseRepository(database.exerciseDao(), database.muscleDao())
         val routineRepository = RoutineRepository(database.routineDao())
 
@@ -26,10 +24,5 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
-    }
-
-    override fun onDestroy() {
-        database.close()
-        super.onDestroy()
     }
 }

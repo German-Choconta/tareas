@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,6 +13,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,7 +27,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
@@ -168,21 +175,80 @@ private fun HistoryRawHistoryContent(
                 Text("Los records complementan los datos guardados; no los reemplazan.")
             }
         }
-        items(
-            count = historyItems.itemCount,
-            key = historyItems.itemKey { it.stableKey },
-        ) { index ->
-            when (val item = historyItems[index]) {
-                is HistoryListItem.SessionHeader -> HistorySessionHeader(item)
-                is HistoryListItem.SetItem -> HistoryRawSetRow(item)
-                null -> Unit
+
+        when (historyItems.loadState.refresh) {
+            is LoadState.Loading -> item(key = "history-refresh-loading") {
+                HistoryLoadingState("Cargando historial…")
+            }
+            is LoadState.Error -> item(key = "history-refresh-error") {
+                HistoryLoadError(onRetry = historyItems::retry)
+            }
+            is LoadState.NotLoading -> {
+                if (historyItems.itemCount == 0) {
+                    item(key = "history-empty-detail") {
+                        Text("No hay sets guardados para este ejercicio.")
+                    }
+                } else {
+                    items(
+                        count = historyItems.itemCount,
+                        key = historyItems.itemKey { it.stableKey },
+                    ) { index ->
+                        when (val item = historyItems[index]) {
+                            is HistoryListItem.SessionHeader -> HistorySessionHeader(item)
+                            is HistoryListItem.SetItem -> HistoryRawSetRow(item)
+                            null -> Unit
+                        }
+                    }
+                }
             }
         }
-        if (historyItems.loadState.refresh is LoadState.Error) {
-            item(key = "history-error") { Text("No se pudo cargar el historial.") }
+
+        when (historyItems.loadState.append) {
+            is LoadState.Loading -> item(key = "history-more") {
+                HistoryLoadingState("Cargando más historial…")
+            }
+            is LoadState.Error -> item(key = "history-more-error") {
+                HistoryLoadError(
+                    message = "No se pudo cargar más historial.",
+                    onRetry = historyItems::retry,
+                )
+            }
+            is LoadState.NotLoading -> Unit
         }
-        if (historyItems.loadState.append is LoadState.Loading) {
-            item(key = "history-more") { Text("Cargando más historial…") }
+    }
+}
+
+@Composable
+private fun HistoryLoadingState(message: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CircularProgressIndicator()
+        Text(message)
+    }
+}
+
+@Composable
+private fun HistoryLoadError(
+    message: String = "No se pudo cargar el historial.",
+    onRetry: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(message, style = MaterialTheme.typography.titleMedium)
+        Text("Tus datos siguen en Room. Puedes volver a intentar la lectura sin modificar el historial.")
+        Button(
+            onClick = onRetry,
+            modifier = Modifier.minimumInteractiveComponentSize(),
+        ) {
+            Text("Reintentar")
         }
     }
 }

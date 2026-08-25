@@ -84,6 +84,7 @@ class BackupScreenUiTest {
         assertEquals(0, confirmations)
 
         composeRule.onNodeWithText("Revisar reemplazo").performClick()
+        composeRule.waitForIdle()
 
         assertEquals(1, replaceRequests)
         assertEquals(0, confirmations)
@@ -118,6 +119,7 @@ class BackupScreenUiTest {
         composeRule.onNodeWithContentDescription(
             "Confirmar reemplazo destructivo de todos los datos locales",
         ).performClick()
+        composeRule.waitForIdle()
         assertEquals(1, confirmations)
     }
 
@@ -147,6 +149,7 @@ class BackupScreenUiTest {
         composeRule.onNodeWithText("Exportar backup portable").performClick()
         composeRule.onNodeWithText("Exportar workouts a CSV").performClick()
         composeRule.onNodeWithText("Seleccionar backup para restaurar").performClick()
+        composeRule.waitForIdle()
 
         assertEquals(1, backupExports)
         assertEquals(1, csvExports)

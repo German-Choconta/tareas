@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.germanchoconta.gymtracker.data.backup.BackupDocumentIo
 import com.germanchoconta.gymtracker.data.backup.BackupRepository
+import com.germanchoconta.gymtracker.data.health.HealthConnectRecoverySource
 import com.germanchoconta.gymtracker.data.local.ExerciseRepository
 import com.germanchoconta.gymtracker.data.local.GymTrackerDatabase
 import com.germanchoconta.gymtracker.data.local.HistoryRepository
@@ -27,6 +28,7 @@ class MainActivity : ComponentActivity() {
         val historyRepository = HistoryRepository(database.historyDao())
         val backupRepository = BackupRepository(database, database.backupDao())
         val backupDocumentIo = BackupDocumentIo(contentResolver)
+        val recoveryHealthSource = HealthConnectRecoverySource(applicationContext)
 
         setContent {
             GymTrackerTheme {
@@ -37,6 +39,7 @@ class MainActivity : ComponentActivity() {
                     historyRepository = historyRepository,
                     backupRepository = backupRepository,
                     backupDocumentIo = backupDocumentIo,
+                    recoveryHealthSource = recoveryHealthSource,
                     appVersion = BuildConfig.VERSION_NAME,
                 )
             }

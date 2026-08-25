@@ -138,4 +138,40 @@ interface HistoryDao {
         """,
     )
     suspend fun getExercisePrFacts(exerciseId: String): List<PrFactRow>
+
+    @Query(
+        """
+        SELECT
+            w.id AS workoutId,
+            w.startedAt AS startedAt,
+            w.finishedAt AS finishedAt,
+            we.id AS workoutExerciseId,
+            we.position AS workoutExercisePosition,
+            ws.id AS workoutSetId,
+            ws.position AS setPosition,
+            ws.type AS type,
+            ws.loadGrams AS loadGrams,
+            ws.reps AS reps,
+            ws.rirTenths AS rirTenths,
+            ws.completedAt AS completedAt
+        FROM workout_exercise we
+        INNER JOIN workout w ON w.id = we.workoutId
+        INNER JOIN workout_set ws ON ws.workoutExerciseId = we.id
+        WHERE we.exerciseId = :exerciseId
+          AND w.startedAt >= :startInclusive
+          AND w.startedAt < :endExclusive
+        ORDER BY
+            w.startedAt ASC,
+            w.id ASC,
+            we.position ASC,
+            we.id ASC,
+            ws.position ASC,
+            ws.id ASC
+        """,
+    )
+    suspend fun getExercisePrFactsInRange(
+        exerciseId: String,
+        startInclusive: Long,
+        endExclusive: Long,
+    ): List<PrFactRow>
 }

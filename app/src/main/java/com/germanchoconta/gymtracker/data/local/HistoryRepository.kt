@@ -2,6 +2,7 @@ package com.germanchoconta.gymtracker.data.local
 
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
+import com.germanchoconta.gymtracker.domain.AnalyticsEpochBounds
 import com.germanchoconta.gymtracker.domain.ExercisePersonalRecords
 import com.germanchoconta.gymtracker.domain.PersonalRecordEngine
 import com.germanchoconta.gymtracker.domain.PrSetFact
@@ -23,6 +24,19 @@ class HistoryRepository(private val historyDao: HistoryDao) {
 
     suspend fun prFacts(exerciseId: String): List<PrSetFact> =
         historyDao.getExercisePrFacts(exerciseId).map(PrFactRow::toDomain)
+
+    suspend fun analyticsFacts(
+        exerciseId: String,
+        bounds: AnalyticsEpochBounds?,
+    ): List<PrSetFact> = if (bounds == null) {
+        prFacts(exerciseId)
+    } else {
+        historyDao.getExercisePrFactsInRange(
+            exerciseId = exerciseId,
+            startInclusive = bounds.startInclusive,
+            endExclusive = bounds.endExclusive,
+        ).map(PrFactRow::toDomain)
+    }
 
     suspend fun records(exerciseId: String): ExercisePersonalRecords =
         PersonalRecordEngine.calculate(prFacts(exerciseId))

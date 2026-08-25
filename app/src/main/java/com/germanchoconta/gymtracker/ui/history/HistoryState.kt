@@ -13,12 +13,24 @@ import androidx.paging.map
 import com.germanchoconta.gymtracker.data.local.HistoryExerciseRow
 import com.germanchoconta.gymtracker.data.local.HistoryRepository
 import com.germanchoconta.gymtracker.data.local.HistorySetRow
+import com.germanchoconta.gymtracker.domain.AnalyticsDateRange
 import com.germanchoconta.gymtracker.domain.ExercisePersonalRecords
+import com.germanchoconta.gymtracker.domain.ExerciseProgressAnalytics
+import com.germanchoconta.gymtracker.domain.FrequencyBucketSize
 import com.germanchoconta.gymtracker.domain.PersonalRecordEngine
 import com.germanchoconta.gymtracker.domain.PersonalRecordKind
 import com.germanchoconta.gymtracker.domain.PrSetFact
 import com.germanchoconta.gymtracker.domain.PreviousSessionComparison
+import com.germanchoconta.gymtracker.domain.ProgressAnalyticsEngine
+import com.germanchoconta.gymtracker.domain.ProgressMetric
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,17 +71,30 @@ data class HistoryUiState(
     val records: ExercisePersonalRecords = ExercisePersonalRecords(),
     val comparison: PreviousSessionComparison? = null,
     val loadingMetrics: Boolean = false,
+    val detailSection: HistoryDetailSection = HistoryDetailSection.HISTORY,
+    val progress: ProgressUiState = ProgressUiState(),
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModel(
     private val repository: HistoryRepository,
     private val savedStateHandle: SavedStateHandle,
+    private val zoneIdProvider: () -> ZoneId = ZoneId::systemDefault,
 ) : ViewModel() {
     private val selectedId = savedStateHandle.getStateFlow<String?>(SELECTED_EXERCISE_KEY, null)
     private val metrics = MutableStateFlow(ExercisePersonalRecords())
+    private var progressAnalytics = emptyProgressAnalytics()
+    private var analyticsJob: Job? = null
+    private var analyticsZoneId: ZoneId = zoneIdProvider()
+    private var allTimeFactsExerciseId: String? = null
+    private var allTimeFactsDeferred: Deferred<List<PrSetFact>>? = null
+
     private val mutableState = MutableStateFlow(
-        HistoryUiState(selectedExerciseId = selectedId.value),
+        HistoryUiState(
+            selectedExerciseId = selectedId.value,
+            detailSection = restoredEnum(DETAIL_SECTION_KEY, HistoryDetailSection.HISTORY),
+            progress = restoredProgressState(),
+        ),
     )
     val uiState: StateFlow<HistoryUiState> = mutableState.asStateFlow()
 
@@ -132,27 +157,128 @@ class HistoryViewModel(
         savedStateHandle[SELECTED_EXERCISE_KEY] = exerciseId
         prepareSelection(exerciseId)
         loadMetrics(exerciseId)
+        loadAnalytics(exerciseId)
     }
 
     fun closeExercise() {
+        analyticsJob?.cancel()
+        resetSharedAllTimeFacts()
         savedStateHandle[SELECTED_EXERCISE_KEY] = null
         metrics.value = ExercisePersonalRecords()
+        progressAnalytics = emptyProgressAnalytics()
         mutableState.value = mutableState.value.copy(
             selectedExerciseId = null,
             selectedExercise = null,
             records = ExercisePersonalRecords(),
             comparison = null,
             loadingMetrics = false,
+            progress = mutableState.value.progress.copy(
+                loading = false,
+                errorMessage = null,
+                exactLoads = emptyList(),
+                selectedExactLoadGrams = null,
+                eligibleSessionCount = 0,
+                chart = emptyProgressChart(mutableState.value.progress.metric),
+                selectedPointIndex = null,
+            ),
         )
+    }
+
+    fun selectDetailSection(section: HistoryDetailSection) {
+        savedStateHandle[DETAIL_SECTION_KEY] = section.name
+        mutableState.update { it.copy(detailSection = section) }
+    }
+
+    fun setProgressMetric(metric: ProgressMetric) {
+        savedStateHandle[PROGRESS_METRIC_KEY] = metric.name
+        mutableState.update { state ->
+            val progress = state.progress.copy(metric = metric)
+            state.copy(progress = rebuildProgressChart(progress))
+        }
+    }
+
+    fun setProgressRangeMode(mode: ProgressRangeMode) {
+        val current = mutableState.value.progress
+        val zone = zoneIdProvider()
+        var start = current.customStartDate
+        var end = current.customEndDate
+        if (mode == ProgressRangeMode.CUSTOM && (start == null || end == null)) {
+            val first = progressAnalytics.sessions.firstOrNull()?.startedAt
+            val last = progressAnalytics.sessions.lastOrNull()?.startedAt
+            val fallback = LocalDate.now(zone)
+            start = first?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() } ?: fallback
+            end = last?.let { Instant.ofEpochMilli(it).atZone(zone).toLocalDate() } ?: fallback
+            savedStateHandle[PROGRESS_START_EPOCH_DAY_KEY] = start.toEpochDay()
+            savedStateHandle[PROGRESS_END_EPOCH_DAY_KEY] = end.toEpochDay()
+        }
+        savedStateHandle[PROGRESS_RANGE_MODE_KEY] = mode.name
+        mutableState.update { state ->
+            state.copy(
+                progress = state.progress.copy(
+                    rangeMode = mode,
+                    customStartDate = start,
+                    customEndDate = end,
+                    errorMessage = null,
+                ),
+            )
+        }
+        selectedId.value?.let(::loadAnalytics)
+    }
+
+    fun setCustomStartDate(date: LocalDate) {
+        savedStateHandle[PROGRESS_START_EPOCH_DAY_KEY] = date.toEpochDay()
+        mutableState.update { state -> state.copy(progress = state.progress.copy(customStartDate = date, errorMessage = null)) }
+        selectedId.value?.let(::loadAnalytics)
+    }
+
+    fun setCustomEndDate(date: LocalDate) {
+        savedStateHandle[PROGRESS_END_EPOCH_DAY_KEY] = date.toEpochDay()
+        mutableState.update { state -> state.copy(progress = state.progress.copy(customEndDate = date, errorMessage = null)) }
+        selectedId.value?.let(::loadAnalytics)
+    }
+
+    fun setExactLoad(loadGrams: Long) {
+        if (mutableState.value.progress.exactLoads.none { it.loadGrams == loadGrams }) return
+        savedStateHandle[PROGRESS_EXACT_LOAD_KEY] = loadGrams
+        mutableState.update { state ->
+            val progress = state.progress.copy(selectedExactLoadGrams = loadGrams)
+            state.copy(progress = rebuildProgressChart(progress))
+        }
+    }
+
+    fun setFrequencyBucketSize(bucketSize: FrequencyBucketSize) {
+        savedStateHandle[PROGRESS_BUCKET_KEY] = bucketSize.name
+        mutableState.update { state ->
+            val progress = state.progress.copy(frequencyBucketSize = bucketSize)
+            state.copy(progress = rebuildProgressChart(progress))
+        }
+    }
+
+    fun selectPreviousProgressPoint() = moveSelectedProgressPoint(-1)
+
+    fun selectNextProgressPoint() = moveSelectedProgressPoint(1)
+
+    private fun moveSelectedProgressPoint(delta: Int) {
+        mutableState.update { state ->
+            val points = state.progress.chart.points
+            if (points.isEmpty()) return@update state
+            val current = state.progress.selectedPointIndex ?: points.lastIndex
+            val next = (current + delta).coerceIn(0, points.lastIndex)
+            state.copy(progress = state.progress.copy(selectedPointIndex = next))
+        }
     }
 
     private fun restoreSelection(exerciseId: String) {
         prepareSelection(exerciseId)
         loadMetrics(exerciseId)
+        loadAnalytics(exerciseId)
     }
 
     private fun prepareSelection(exerciseId: String) {
+        analyticsJob?.cancel()
+        resetSharedAllTimeFacts()
         metrics.value = ExercisePersonalRecords()
+        progressAnalytics = emptyProgressAnalytics()
         mutableState.update { state ->
             state.copy(
                 selectedExerciseId = exerciseId,
@@ -160,28 +286,204 @@ class HistoryViewModel(
                 loadingMetrics = true,
                 records = ExercisePersonalRecords(),
                 comparison = null,
+                progress = state.progress.copy(
+                    loading = true,
+                    errorMessage = null,
+                    rangeValid = true,
+                    exactLoads = emptyList(),
+                    eligibleSessionCount = 0,
+                    chart = emptyProgressChart(state.progress.metric),
+                    selectedPointIndex = null,
+                ),
             )
         }
     }
 
     private fun loadMetrics(exerciseId: String) {
         viewModelScope.launch {
-            val facts = repository.prFacts(exerciseId)
-            val calculated = PersonalRecordEngine.calculate(facts)
-            if (selectedId.value != exerciseId) return@launch
-            metrics.value = calculated
-            mutableState.update { state ->
-                if (state.selectedExerciseId != exerciseId) state else state.copy(
-                    records = calculated,
-                    comparison = PersonalRecordEngine.previousSessionComparison(facts),
-                    loadingMetrics = false,
-                )
+            try {
+                val facts = sharedAllTimeFacts(exerciseId).await()
+                val calculated = PersonalRecordEngine.calculate(facts)
+                if (selectedId.value != exerciseId) return@launch
+                metrics.value = calculated
+                mutableState.update { state ->
+                    if (state.selectedExerciseId != exerciseId) state else state.copy(
+                        records = calculated,
+                        comparison = PersonalRecordEngine.previousSessionComparison(facts),
+                        loadingMetrics = false,
+                    )
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                if (selectedId.value == exerciseId) {
+                    mutableState.update { state ->
+                        state.copy(loadingMetrics = false)
+                    }
+                }
             }
         }
     }
 
+    private fun loadAnalytics(exerciseId: String) {
+        analyticsJob?.cancel()
+        val progress = mutableState.value.progress
+        val range = progress.activeDateRange()
+        if (range == null) {
+            mutableState.update { state ->
+                state.copy(
+                    progress = state.progress.copy(
+                        loading = false,
+                        rangeValid = false,
+                        chart = emptyProgressChart(state.progress.metric),
+                        selectedPointIndex = null,
+                    ),
+                )
+            }
+            return
+        }
+
+        val zoneId = zoneIdProvider()
+        val resolution = ProgressAnalyticsEngine.resolveRange(range, zoneId)
+        if (!resolution.isValid) {
+            mutableState.update { state ->
+                state.copy(
+                    progress = state.progress.copy(
+                        loading = false,
+                        rangeValid = false,
+                        errorMessage = null,
+                        chart = emptyProgressChart(state.progress.metric),
+                        selectedPointIndex = null,
+                    ),
+                )
+            }
+            return
+        }
+
+        mutableState.update { state -> state.copy(progress = state.progress.copy(loading = true, rangeValid = true, errorMessage = null)) }
+        analyticsJob = viewModelScope.launch {
+            try {
+                val facts = if (resolution.bounds == null) {
+                    sharedAllTimeFacts(exerciseId).await()
+                } else {
+                    repository.analyticsFacts(exerciseId, resolution.bounds)
+                }
+                val calculated = ProgressAnalyticsEngine.calculate(facts, range, zoneId)
+                if (selectedId.value != exerciseId || mutableState.value.progress.activeDateRange() != range) return@launch
+
+                progressAnalytics = calculated
+                analyticsZoneId = zoneId
+                val current = mutableState.value.progress
+                val selectedLoad = current.selectedExactLoadGrams
+                    ?.takeIf { load -> calculated.exactLoads.any { it.loadGrams == load } }
+                    ?: calculated.defaultExactLoadGrams
+                savedStateHandle[PROGRESS_EXACT_LOAD_KEY] = selectedLoad
+                val chart = buildProgressChartState(
+                    analytics = calculated,
+                    metric = current.metric,
+                    selectedExactLoadGrams = selectedLoad,
+                    bucketSize = current.frequencyBucketSize,
+                    range = range,
+                    zoneId = zoneId,
+                )
+                mutableState.update { state ->
+                    if (state.selectedExerciseId != exerciseId || state.progress.activeDateRange() != range) state else state.copy(
+                        progress = state.progress.copy(
+                            loading = false,
+                            errorMessage = null,
+                            rangeValid = true,
+                            exactLoads = calculated.exactLoads,
+                            selectedExactLoadGrams = selectedLoad,
+                            eligibleSessionCount = calculated.sessions.size,
+                            chart = chart,
+                            selectedPointIndex = chart.points.lastIndex.takeIf { it >= 0 },
+                        ),
+                    )
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                if (selectedId.value == exerciseId) {
+                    mutableState.update { state ->
+                        state.copy(
+                            progress = state.progress.copy(
+                                loading = false,
+                                errorMessage = "No se pudieron calcular los analytics para este rango.",
+                                chart = emptyProgressChart(state.progress.metric),
+                                selectedPointIndex = null,
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun sharedAllTimeFacts(exerciseId: String): Deferred<List<PrSetFact>> {
+        val existing = allTimeFactsDeferred
+        if (allTimeFactsExerciseId == exerciseId && existing != null && !existing.isCancelled) return existing
+
+        existing?.cancel()
+        allTimeFactsExerciseId = exerciseId
+        return viewModelScope.async { repository.prFacts(exerciseId) }.also { allTimeFactsDeferred = it }
+    }
+
+    private fun resetSharedAllTimeFacts() {
+        allTimeFactsDeferred?.cancel()
+        allTimeFactsDeferred = null
+        allTimeFactsExerciseId = null
+    }
+
+    private fun rebuildProgressChart(progress: ProgressUiState): ProgressUiState {
+        val range = progress.activeDateRange() ?: return progress.copy(
+            rangeValid = false,
+            chart = emptyProgressChart(progress.metric),
+            selectedPointIndex = null,
+        )
+        val chart = buildProgressChartState(
+            analytics = progressAnalytics,
+            metric = progress.metric,
+            selectedExactLoadGrams = progress.selectedExactLoadGrams,
+            bucketSize = progress.frequencyBucketSize,
+            range = range,
+            zoneId = analyticsZoneId,
+        )
+        return progress.copy(
+            rangeValid = true,
+            chart = chart,
+            selectedPointIndex = chart.points.lastIndex.takeIf { it >= 0 },
+        )
+    }
+
+    private fun restoredProgressState(): ProgressUiState {
+        val mode = restoredEnum(PROGRESS_RANGE_MODE_KEY, ProgressRangeMode.ALL_TIME)
+        val start = savedStateHandle.get<Long>(PROGRESS_START_EPOCH_DAY_KEY)?.let(LocalDate::ofEpochDay)
+        val end = savedStateHandle.get<Long>(PROGRESS_END_EPOCH_DAY_KEY)?.let(LocalDate::ofEpochDay)
+        val metric = restoredEnum(PROGRESS_METRIC_KEY, ProgressMetric.LOAD)
+        return ProgressUiState(
+            rangeMode = mode,
+            customStartDate = start,
+            customEndDate = end,
+            rangeValid = mode == ProgressRangeMode.ALL_TIME || (start != null && end != null && start <= end),
+            metric = metric,
+            frequencyBucketSize = restoredEnum(PROGRESS_BUCKET_KEY, FrequencyBucketSize.WEEK),
+            selectedExactLoadGrams = savedStateHandle.get<Long>(PROGRESS_EXACT_LOAD_KEY),
+            chart = emptyProgressChart(metric),
+        )
+    }
+
+    private inline fun <reified T : Enum<T>> restoredEnum(key: String, fallback: T): T =
+        savedStateHandle.get<String>(key)?.let { value -> enumValues<T>().firstOrNull { it.name == value } } ?: fallback
+
     companion object {
         internal const val SELECTED_EXERCISE_KEY = "history_selected_exercise_id"
+        internal const val DETAIL_SECTION_KEY = "history_detail_section"
+        internal const val PROGRESS_RANGE_MODE_KEY = "history_progress_range_mode"
+        internal const val PROGRESS_START_EPOCH_DAY_KEY = "history_progress_start_epoch_day"
+        internal const val PROGRESS_END_EPOCH_DAY_KEY = "history_progress_end_epoch_day"
+        internal const val PROGRESS_METRIC_KEY = "history_progress_metric"
+        internal const val PROGRESS_EXACT_LOAD_KEY = "history_progress_exact_load_grams"
+        internal const val PROGRESS_BUCKET_KEY = "history_progress_frequency_bucket"
 
         fun factory(repository: HistoryRepository): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
@@ -195,6 +497,13 @@ class HistoryViewModel(
             }
     }
 }
+
+private fun emptyProgressAnalytics() = ExerciseProgressAnalytics(
+    rangeValid = true,
+    sessions = emptyList(),
+    exactLoads = emptyList(),
+    defaultExactLoadGrams = null,
+)
 
 private fun HistorySetRow.toPrSetFact() = PrSetFact(
     workoutId = workoutId,

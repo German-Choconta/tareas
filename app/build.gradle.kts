@@ -55,6 +55,9 @@ dependencies {
     implementation("androidx.paging:paging-runtime:3.5.1")
     implementation("androidx.paging:paging-compose:3.5.1")
 
+    implementation("com.patrykandpatrick.vico:compose:3.2.3")
+    implementation("com.patrykandpatrick.vico:compose-m3:3.2.3")
+
     implementation("androidx.room3:room3-runtime:3.0.1")
     implementation("androidx.room3:room3-paging:3.0.1")
     implementation("androidx.sqlite:sqlite-bundled:2.7.0")

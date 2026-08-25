@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,7 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -37,13 +36,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -80,26 +79,20 @@ internal fun ManagementHome(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(if (destination == ManagementDestination.EXERCISES) "Ejercicios" else "Rutinas")
-                },
-            )
-        },
-        bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = destination == ManagementDestination.EXERCISES,
-                    onClick = { onDestinationChange(ManagementDestination.EXERCISES) },
-                    icon = { Text("E") },
-                    label = { Text("Ejercicios") },
-                )
-                NavigationBarItem(
-                    selected = destination == ManagementDestination.ROUTINES,
-                    onClick = { onDestinationChange(ManagementDestination.ROUTINES) },
-                    icon = { Text("R") },
-                    label = { Text("Rutinas") },
-                )
+            Column {
+                TopAppBar(title = { Text("GymTracker") })
+                PrimaryTabRow(selectedTabIndex = destination.ordinal) {
+                    Tab(
+                        selected = destination == ManagementDestination.EXERCISES,
+                        onClick = { onDestinationChange(ManagementDestination.EXERCISES) },
+                        text = { Text("Ejercicios") },
+                    )
+                    Tab(
+                        selected = destination == ManagementDestination.ROUTINES,
+                        onClick = { onDestinationChange(ManagementDestination.ROUTINES) },
+                        text = { Text("Rutinas") },
+                    )
+                }
             }
         },
         floatingActionButton = {
@@ -244,7 +237,7 @@ internal fun ExerciseEditorScreen(
                 title = { Text(if (draft.isNew) "Nuevo ejercicio" else "Editar ejercicio") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 actions = {
@@ -426,7 +419,7 @@ internal fun RoutineEditorScreen(
                 title = { Text(if (draft.isNew) "Nueva rutina" else "Editar rutina") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 actions = {

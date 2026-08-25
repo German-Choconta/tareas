@@ -8,6 +8,7 @@ import com.germanchoconta.gymtracker.data.backup.BackupDocumentIo
 import com.germanchoconta.gymtracker.data.backup.BackupFormatException
 import com.germanchoconta.gymtracker.data.backup.BackupPreview
 import com.germanchoconta.gymtracker.data.backup.BackupRepository
+import com.germanchoconta.gymtracker.data.backup.BackupSnapshot
 import com.germanchoconta.gymtracker.data.backup.BackupValidationException
 import com.germanchoconta.gymtracker.data.backup.BackupValidator
 import com.germanchoconta.gymtracker.data.backup.DecodedBackup
@@ -21,11 +22,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 internal interface BackupDataGateway {
-    suspend fun snapshot(): com.germanchoconta.gymtracker.data.backup.BackupSnapshot
-    suspend fun replaceAll(snapshot: com.germanchoconta.gymtracker.data.backup.BackupSnapshot)
+    suspend fun snapshot(): BackupSnapshot
+    suspend fun replaceAll(snapshot: BackupSnapshot)
 }
 
 internal interface BackupFileGateway {
@@ -35,8 +35,7 @@ internal interface BackupFileGateway {
 
 private class RepositoryGateway(private val repository: BackupRepository) : BackupDataGateway {
     override suspend fun snapshot() = repository.snapshot()
-    override suspend fun replaceAll(snapshot: com.germanchoconta.gymtracker.data.backup.BackupSnapshot) =
-        repository.replaceAll(snapshot)
+    override suspend fun replaceAll(snapshot: BackupSnapshot) = repository.replaceAll(snapshot)
 }
 
 private class DocumentGateway(private val documentIo: BackupDocumentIo) : BackupFileGateway {
@@ -98,19 +97,20 @@ class BackupViewModel internal constructor(
         _uiState.update { it.copy(replaceConfirmationVisible = false) }
     }
 
-    fun confirmReplace(onRestored: () -> Unit = {}) = launchExclusive {
-        val decoded = pendingImport
-            ?: throw BackupValidationException("No hay un backup validado pendiente de restauración.")
-        _uiState.update { it.copy(replaceConfirmationVisible = false) }
-        dataGateway.replaceAll(decoded.snapshot)
-        pendingImport = null
-        _uiState.update {
-            it.copy(
-                preview = null,
-                message = "Datos restaurados y verificados correctamente.",
-            )
+    fun confirmReplace(onRestored: () -> Unit = {}) {
+        val decoded = pendingImport ?: return
+        launchExclusive {
+            _uiState.update { it.copy(replaceConfirmationVisible = false) }
+            dataGateway.replaceAll(decoded.snapshot)
+            pendingImport = null
+            _uiState.update {
+                it.copy(
+                    preview = null,
+                    message = "Datos restaurados y verificados correctamente.",
+                )
+            }
+            onRestored()
         }
-        onRestored()
     }
 
     fun discardPreview() {
@@ -124,10 +124,10 @@ class BackupViewModel internal constructor(
     }
 
     private fun launchExclusive(block: suspend () -> Unit) {
+        if (!actionMutex.tryLock()) return
+        _uiState.update { it.copy(busy = true, error = null, message = null) }
         viewModelScope.launch {
-            if (!actionMutex.tryLock()) return@launch
             try {
-                _uiState.update { it.copy(busy = true, error = null, message = null) }
                 block()
             } catch (error: CancellationException) {
                 throw error

@@ -2,6 +2,7 @@ package com.germanchoconta.gymtracker.ui.backup
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +42,16 @@ class BackupScreenUiTest {
         assertEquals(Intent.ACTION_CREATE_DOCUMENT, csvIntent.action)
         assertEquals(BackupFormat.CSV_MIME_TYPE, csvIntent.type)
         assertEquals(Intent.ACTION_OPEN_DOCUMENT, openIntent.action)
+    }
+
+    @Test
+    fun canceledDocumentPickerDoesNothing() {
+        var actions = 0
+        dispatchDocumentUri(null) { actions += 1 }
+        assertEquals(0, actions)
+
+        dispatchDocumentUri(Uri.parse("content://synthetic/selected")) { actions += 1 }
+        assertEquals(1, actions)
     }
 
     @Test

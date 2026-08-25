@@ -88,7 +88,7 @@ class HistoryViewModelTest {
         assertNull(viewModel.uiState.value.selectedExerciseId)
     }
 
-    private class FakeHistoryDao(
+    internal class FakeHistoryDao(
         private val exercises: List<HistoryExerciseRow>,
         private val facts: List<PrFactRow>,
     ) : HistoryDao {
@@ -103,5 +103,11 @@ class HistoryViewModelTest {
             }
 
         override suspend fun getExercisePrFacts(exerciseId: String): List<PrFactRow> = facts
+
+        override suspend fun getExercisePrFactsInRange(
+            exerciseId: String,
+            startInclusive: Long,
+            endExclusive: Long,
+        ): List<PrFactRow> = facts.filter { it.startedAt >= startInclusive && it.startedAt < endExclusive }
     }
 }

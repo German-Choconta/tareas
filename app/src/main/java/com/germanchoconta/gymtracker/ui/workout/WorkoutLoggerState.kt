@@ -141,6 +141,7 @@ class WorkoutLoggerViewModel(
 
     private var workoutNotesJob: Job? = null
     private val exerciseNotesJobs = mutableMapOf<String, Job>()
+    private val setAutosaveJobs = mutableMapOf<String, Job>()
 
     init {
         recoverActiveWorkout()
@@ -176,33 +177,36 @@ class WorkoutLoggerViewModel(
         val error = WorkoutInputValidation.loadError(text)
         updateSetUi(setId) { it.copy(loadText = text, loadError = error) }
         val grams = WorkoutInputValidation.loadGrams(text) ?: return
-        viewModelScope.launch { workoutRepository.updateSetLoad(setId, grams) }
+        persistLatest("$setId:load") { workoutRepository.updateSetLoad(setId, grams) }
     }
 
     fun updateReps(setId: String, text: String) {
         val error = WorkoutInputValidation.repsError(text)
         updateSetUi(setId) { it.copy(repsText = text, repsError = error) }
         val reps = WorkoutInputValidation.reps(text) ?: return
-        viewModelScope.launch { workoutRepository.updateSetReps(setId, reps) }
+        persistLatest("$setId:reps") { workoutRepository.updateSetReps(setId, reps) }
     }
 
     fun updateRir(setId: String, text: String) {
         val error = WorkoutInputValidation.rirError(text)
         updateSetUi(setId) { it.copy(rirText = text, rirError = error) }
         if (error != null) return
-        viewModelScope.launch { workoutRepository.updateSetRir(setId, WorkoutInputValidation.rirTenths(text)) }
+        persistLatest("$setId:rir") {
+            workoutRepository.updateSetRir(setId, WorkoutInputValidation.rirTenths(text))
+        }
     }
 
     fun updateSetType(setId: String, type: String) {
         if (type !in SetTypes.all) return
         updateSetUi(setId) { it.copy(type = type) }
-        viewModelScope.launch { workoutRepository.updateSetType(setId, type) }
+        persistLatest("$setId:type") { workoutRepository.updateSetType(setId, type) }
     }
 
     fun toggleCompleted(setId: String) {
         val set = findSet(setId) ?: return
         if (set.completed) {
             viewModelScope.launch {
+                flushSetAutosaves(setId)
                 if (workoutRepository.setCompleted(setId, null)) loadCurrentWorkout()
             }
             return
@@ -218,6 +222,7 @@ class WorkoutLoggerViewModel(
         val reps = requireNotNull(WorkoutInputValidation.reps(set.repsText))
         val rir = WorkoutInputValidation.rirTenths(set.rirText)
         viewModelScope.launch {
+            flushSetAutosaves(set.id)
             val persisted = workoutRepository.updateSet(set.id, load, reps, rir, set.type)
             if (persisted && workoutRepository.setCompleted(set.id, now())) {
                 loadCurrentWorkout()
@@ -234,6 +239,7 @@ class WorkoutLoggerViewModel(
 
     fun removeSet(setId: String, allowCompleted: Boolean = false) {
         viewModelScope.launch {
+            flushSetAutosaves(setId)
             if (workoutRepository.removeSet(setId, allowCompleted)) {
                 loadCurrentWorkout()
             } else {
@@ -252,6 +258,7 @@ class WorkoutLoggerViewModel(
 
     fun replaceExercise(workoutExerciseId: String, exerciseId: String) {
         viewModelScope.launch {
+            flushExerciseSetAutosaves(workoutExerciseId)
             if (workoutRepository.replaceExercise(workoutExerciseId, exerciseId)) {
                 loadCurrentWorkout()
             } else {
@@ -302,9 +309,9 @@ class WorkoutLoggerViewModel(
     fun finishConfirmed() {
         val workoutId = _uiState.value.activeWorkoutId ?: return
         viewModelScope.launch {
-            // Flush the latest debounced notes while the workout is still editable.
-            // Otherwise a fast "type note → Finish" sequence could race finishedAt
-            // and the guarded DAO update would correctly refuse the late note write.
+            // Flush every canonical autosave while the workout is still editable.
+            // This protects fast "type → Finish" sequences from racing finishedAt.
+            flushAllSetAutosaves()
             workoutNotesJob?.join()
             exerciseNotesJobs.values.toList().forEach { it.join() }
             if (workoutRepository.finishWorkout(workoutId, now())) {
@@ -316,6 +323,37 @@ class WorkoutLoggerViewModel(
 
     fun clearMessage() {
         _uiState.update { it.copy(message = null) }
+    }
+
+    private fun persistLatest(key: String, block: suspend () -> Unit) {
+        setAutosaveJobs.remove(key)?.cancel()
+        setAutosaveJobs[key] = viewModelScope.launch { block() }
+    }
+
+    private suspend fun flushSetAutosaves(setId: String) {
+        val prefix = "$setId:"
+        setAutosaveJobs
+            .filterKeys { it.startsWith(prefix) }
+            .values
+            .toList()
+            .forEach { it.join() }
+    }
+
+    private suspend fun flushExerciseSetAutosaves(workoutExerciseId: String) {
+        val setIds = _uiState.value.exercises
+            .firstOrNull { it.id == workoutExerciseId }
+            ?.sets
+            ?.mapTo(hashSetOf(), WorkoutSetUi::id)
+            .orEmpty()
+        setAutosaveJobs
+            .filterKeys { key -> setIds.any { key.startsWith("$it:") } }
+            .values
+            .toList()
+            .forEach { it.join() }
+    }
+
+    private suspend fun flushAllSetAutosaves() {
+        setAutosaveJobs.values.toList().forEach { it.join() }
     }
 
     private suspend fun loadCurrentWorkout() {

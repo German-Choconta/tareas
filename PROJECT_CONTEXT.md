@@ -1,7 +1,7 @@
 # GymTracker — Project Context & Continuity
 
 > Canonical handoff. Read this first in every new GymTracker session, then verify everything directly in GitHub. **GitHub is the source of truth if this file is stale.**
-> Last updated: 2026-08-25 (America/Bogota), during final closure of PR6 after the implementation head passed full Android CI.
+> Last updated: 2026-08-25 (America/Bogota), after PR6 merged and its post-merge `main` CI passed.
 
 ## 0. Repository, safety, and permanent direction
 
@@ -15,7 +15,7 @@
 - `WorkoutSet` is canonical truth. PRs, e1RM, volume, trends, comparisons and progression are derived/recalculable unless a future stage proves persistence is necessary.
 - Work autonomously in GitHub, but do not advance stages silently. Do not start the next PR until the user explicitly continues.
 
-## 1. Completed stages through PR5
+## 1. Completed stages through PR6
 
 ### PR #1 — Android foundation
 - MERGED.
@@ -55,6 +55,22 @@
   - `gymtracker-debug-apk` — `9566270897`.
   - `gymtracker-room-schema` — `9566130291`.
 
+### PR #15 / Issue #6 — Progress Analytics
+- MERGED / COMPLETED.
+- Final PR head: `4fa2a1abc01f5dde8c0c0f3e26437fb3a3d348d5`.
+- Final PR Android CI: `32868139154` (#129) — SUCCESS.
+- Final PR artifacts:
+  - `gymtracker-debug-apk` — `9571147279`.
+  - `gymtracker-room-schema` — `9571010747`.
+- Final scope audit: 15 GymTracker/documentation files, no Pulso, no Room schema migration, 0 submitted reviews, 0 inline review threads, mergeable before merge.
+- Squash merge: `f4076f6d9d7fd09dc735a758c85f60a9a924a93d`.
+- Issue #6: closed / completed.
+- Post-merge main Android CI: `32870321302` (#130) — SUCCESS.
+- Post-merge main artifacts:
+  - `gymtracker-debug-apk` — `9571975063`.
+  - `gymtracker-room-schema` — `9571833494`.
+- This handoff update is documentation-only. Verify the resulting `main` CI before treating the closure record as fully known-good.
+
 ## 2. Android/toolchain baseline
 
 - Native Android / Kotlin / Jetpack Compose / Material 3.
@@ -89,8 +105,7 @@ Architecture rules:
 
 ## 3. Room schema and historical integrity
 
-### Current schema
-- DB version: **2**.
+- Current DB version: **2**.
 - Schema v1 and v2 remain committed.
 - v1 identity hash: `4419e2711112b42bfbfa3083e3499613`.
 - v2 identity hash: `251aab4f3ed2b0175df34e37323e31cb`.
@@ -130,7 +145,7 @@ Relevant v2 indices:
 - `index_workout_set_workoutExerciseId`;
 - unique `index_workout_set_workoutExerciseId_position`.
 
-## 4. Logger and raw-history invariants inherited by PR6
+## 4. Workout Logger and raw History invariants
 
 PR4 logger preserves:
 - transactional Routine → Workout start;
@@ -141,7 +156,7 @@ PR4 logger preserves:
 - complete/uncomplete, add/remove sets, add/replace exercise, notes, rest timer;
 - active-workout recovery and finish behavior.
 
-PR5 raw history preserves:
+PR5 raw History preserves:
 - History as a top-level destination alongside Exercises and Routines;
 - raw history only from finished workouts;
 - incomplete planned rows remain visible in raw history;
@@ -154,7 +169,7 @@ PR5 raw history preserves:
 Raw deterministic order:
 `workout.startedAt DESC → workout.id DESC → workoutExercise.position ASC → workoutExercise.id ASC → set.position ASC → set.id ASC`.
 
-## 5. PR5 personal-record engine invariants reused exactly by PR6
+## 5. PR5 personal-record engine invariants reused by PR6
 
 A set participates in PR/analytics calculations only if all are true:
 1. parent workout is finished;
@@ -177,169 +192,78 @@ PR definitions retained:
 - Heaviest load: exact integer grams.
 - Highest reps at exact load: exact `loadGrams`, no bucketing/rounding.
 - Estimated 1RM/e1RM: Epley `load × (1 + reps/30)`, only 2–10 reps, RIR excluded, exact rational/`BigInteger` comparison, display rounded half-up to 0.1 kg.
-- Exercise-session volume: sum of eligible `loadGrams × reps` across all occurrences of the exercise in one finished workout, using `BigInteger`.
+- Exercise-session volume: sum eligible `loadGrams × reps` across all occurrences of the exercise in one finished workout using `BigInteger`.
 - Volume is descriptive, never a universal workout-quality score.
 
-## 6. PR #15 / Issue #6 — Progress Analytics
+## 6. PR6 Progress Analytics — final behavior
 
-### Current GitHub state at this handoff
-- PR: **#15 — GymTracker PR 6: Progress analytics**.
-- Branch: `feat/progress-analytics`.
-- Base: `main` at `a2f094ac68e86317a6b2392dc0aeb0495369bc42` when PR opened.
-- Issue: #6 — Progress Analytics.
-- PR remains **draft** until this documentation head itself passes full Android CI.
-- No submitted reviews and no inline review threads were present in the latest pre-handoff check.
-- `Pulso` / `pulso-finanzas` has not been touched.
-- No real/private workout, health, credential, token or export data has been committed.
-
-### Last known fully green implementation head before this documentation commit
-- Code head: `00c93b4c7e06d7809c541052822e1ce09f9d75e6`.
-- Android CI: `32867422398` (#128) — **SUCCESS**.
-- Every step passed: JVM tests, semantic Room schema verification, schema artifact, KVM, all 33 connected instrumented tests, lint, `assembleDebug`, APK artifact.
-- Artifacts:
-  - `gymtracker-debug-apk` — `9570852910`.
-  - `gymtracker-room-schema` — `9570718163`.
-- This proves the complete PR6 implementation before the final documentation-only head. The final PR head must independently pass the same CI contract before ready/merge.
-
-### Architecture
-
-PR6 turns finished raw history into local/offline descriptive progress analytics without creating new canonical persisted truth:
-
+Architecture:
 `Room WorkoutSet truth → bounded/full fact query → pure ProgressAnalyticsEngine → immutable/restorable ProgressUiState → Compose/Vico renderer`
 
 Rules:
-- `WorkoutSet` remains canonical truth.
-- analytics are derived and recalculable;
+- `WorkoutSet` remains canonical truth;
+- analytics are derived/recalculable;
 - no analytics cache is persisted as truth;
-- schema remains v2;
+- Room schema stays v2;
 - Paging remains for raw History only;
-- charts never replace, truncate, or alter raw historical data;
-- Vico is renderer-only and no Vico types cross into domain/state/persistence.
+- charts never replace/truncate raw history;
+- Vico is renderer-only; no Vico types cross into domain/state/persistence.
 
-### UX
+UX:
+- top-level navigation stays Exercises / Routines / History;
+- selected exercise History detail exposes Material 3 `Historial / Progreso` tabs;
+- no fourth bottom-nav destination;
+- raw Paging collection occurs only while Historial is visible;
+- metric chips are horizontally scrollable on compact screens;
+- exact-load choices use `LazyRow`;
+- charts provide textual metric/unit/meaning plus exact point detail and previous/next navigation;
+- loading/empty/error/invalid-range states are explicit.
 
-- Top-level navigation remains Exercises / Routines / History.
-- Selecting an exercise in History opens a detail surface with Material 3 primary tabs:
-  - `Historial`
-  - `Progreso`
-- No fourth bottom-navigation destination was added.
-- Paging collection for raw history occurs only while the Historial section is visible.
-- Metric chips are horizontally scrollable on compact screens; instrumentation verifies an off-screen `Volumen` chip can be scrolled into view and selected on the 320 px CI emulator.
-- Exact-load choices use `LazyRow` so large exact-load sets are not eagerly composed.
-- Every chart has a textual metric/unit/meaning explanation and an exact point-detail surface with previous/next navigation; interpretation does not rely only on pixels or color.
-- Empty, loading, invalid-range and error states are explicit.
+Date/range semantics:
+- All time has no artificial bound;
+- custom UI dates are inclusive;
+- internally custom ranges become `[startOfDay(start), startOfDay(end + 1))` using a captured `ZoneId`;
+- same-day ranges are valid;
+- reversed ranges are invalid and do not query Room;
+- missing performance dates are never synthesized as zero;
+- finite frequency ranges may include explicit zero calendar buckets.
 
-### Date/range semantics
+Metrics:
+1. **Load** — maximum exact eligible load per distinct finished workout.
+2. **Reps at exact load** — maximum reps per workout at one exact selected load; unrelated loads are absent, never synthetic zeroes; default exact load = most represented eligible sessions, tie → higher load.
+3. **Estimated 1RM / e1RM** — best PR5 Epley estimate per workout, reps 2–10 only, RIR excluded, exact rational/`BigInteger` comparison.
+4. **Volume** — exercise-session volume per workout across all exercise occurrences using overflow-safe `BigInteger`; descriptive only.
+5. **Frequency** — distinct eligible workouts; duplicate exercise occurrences count once; Monday-start weekly or calendar-month buckets.
 
-- `ALL_TIME` has no artificial historical bound.
-- Custom range uses inclusive local calendar dates.
-- Internally custom range resolves with a captured `ZoneId` to half-open epoch bounds:
-  `[startOfDay(start), startOfDay(end + 1))`.
-- Same-day custom range is valid.
-- Reversed custom range is invalid and does not issue a bounded Room query.
-- Missing trend dates are not synthesized as zero.
-- Finite frequency ranges may include explicit zero calendar buckets because absence in a calendar bucket is meaningful for frequency.
+Long-history/rendering behavior:
+- domain values remain exact integer/`BigInteger` values;
+- `Double` is rendering coordinate only;
+- chart X positions preserve relative calendar spacing;
+- same-day points retain deterministic order;
+- deterministic presentation-only sampling preserves first/last, extrema and record witnesses;
+- raw Room history and domain truth are never sampled/truncated;
+- existing v2 indices were validated with `EXPLAIN QUERY PLAN`; schema v3 was not justified.
 
-### Progress metrics
+Query behavior:
+- custom ranges query by exercise and epoch bounds;
+- All-time PR5 metrics + PR6 analytics share one transient per-selection `Deferred<List<PrSetFact>>`;
+- the shared result is process-memory only and resets when selection changes/closes;
+- metric/exact-load/frequency-bucket changes rebuild from loaded facts without Room requery;
+- unit coverage explicitly requires one All-time facts query on restoration.
 
-1. **Load**
-   - maximum exact eligible load per distinct finished workout.
-
-2. **Reps at exact load**
-   - maximum reps per workout at one exact selected load;
-   - workouts at other loads are absent, never synthetic zeroes;
-   - default exact load = most represented eligible sessions, tie → higher exact load.
-
-3. **Estimated 1RM / e1RM**
-   - best PR5 Epley estimate per workout;
-   - reps 2–10 only;
-   - RIR excluded;
-   - exact rational/`BigInteger` comparison retained.
-
-4. **Volume**
-   - exercise-session volume per finished workout across every occurrence of the exercise;
-   - overflow-safe `BigInteger`;
-   - descriptive only, not a quality score.
-
-5. **Frequency**
-   - distinct workouts containing at least one eligible set;
-   - duplicate exercise occurrences in one workout count once;
-   - buckets are Monday-start weeks or calendar months.
-
-### Chart representation and long histories
-
-- Domain values stay exact integer/`BigInteger` values.
-- `Double` is only a rendering coordinate for Vico.
-- X positions preserve relative calendar spacing instead of assigning equal ordinal spacing to every session.
-- Same-day points retain deterministic order using bounded fractional presentation coordinates.
-- Long visual series use deterministic **presentation-only** sampling.
-- Sampling preserves first/last points, extrema and record witnesses.
-- Sampling never removes raw Room history or changes canonical/domain analytics.
-- Existing v2 indices are sufficient for the bounded analytics query; instrumented tests include `EXPLAIN QUERY PLAN` coverage, so schema v3 was not justified.
-
-### Query/performance behavior
-
-- Custom ranges query Room by exercise and epoch bounds using existing v2 indices.
-- Opening an exercise in All-time does not perform duplicate full-fact queries for PR5 metrics and PR6 analytics: one transient per-selection `Deferred<List<PrSetFact>>` is shared.
-- That shared result is process-memory state only, reset when the selection changes/closes, and is never persisted as truth.
-- Unit coverage explicitly requires one All-time facts query on restoration.
-- Metric changes, exact-load changes and frequency-bucket changes rebuild from already-loaded analytics and do not requery Room.
-
-### Synthetic/non-identifying test coverage
-
-Domain/JVM coverage includes:
-- all five analytics series;
-- strict ties and deterministic shuffled input;
-- exact gram loads;
-- WORK/DROP/FAILURE inclusion and WARMUP/incomplete/active exclusions;
-- e1RM 2–10 vs outside range and RIR independence;
-- duplicate exercise occurrences and frequency dedupe;
-- timezone/week/month boundaries;
-- `BigInteger` overflow-safe volume;
-- all-time, custom, same-day, empty and invalid ranges;
-- sparse/dense and 5,000-session histories;
-- deterministic downsampling;
-- temporal chart spacing and same-day deterministic X values;
-- SavedState restoration;
-- invalid range no-query behavior;
-- metric/exact-load switching without Room requery;
-- one shared All-time facts query.
-
-Connected/instrumented coverage includes:
-- real Room bounded analytics facts;
-- archived exercise history;
-- routine-deletion-safe history;
-- eight-year synthetic history with arbitrary historical access;
-- query-plan/index checks;
-- History/Progress tab semantics;
-- explicit Progress empty state;
-- compact horizontal metric scrolling and selection.
+Synthetic/non-identifying coverage includes all five series, deterministic ties/shuffled input, exact grams, eligibility exclusions/inclusions, e1RM boundaries/RIR independence, duplicate occurrences, frequency dedupe, timezone/week/month boundaries, overflow-safe volume, all-time/custom/same-day/empty/invalid ranges, sparse/dense/5,000-session histories, deterministic downsampling, temporal X spacing, SavedState restoration, no-query invalid ranges, no-requery metric switches, eight-year Room history, query-plan checks, History/Progress semantics, explicit empty state and compact off-screen metric scrolling.
 
 ## 7. PR6 implementation issues corrected before closure
 
-1. Initial analytics UI existed but was not wired into History detail → added `Historial / Progreso` Material 3 tabs.
+1. Analytics UI initially existed but was not wired into History detail → added `Historial / Progreso` Material 3 tabs.
 2. Chart X initially used ordinal session index → replaced with calendar-relative coordinates.
 3. Exact-load selector could eagerly compose many chips → changed to `LazyRow`.
-4. All-time selection initially queried the same facts separately for PR5 metrics and PR6 analytics → now shares one transient deferred query.
-5. Compose UI empty-state test used a fragile text containment assertion → switched to exact semantics.
-6. Migration to Compose test rule v2 exposed synchronization assumptions → assertions moved to observable UI semantics.
-7. Compact CI emulator revealed `Volumen` was physically outside the horizontal viewport during the test → test now scrolls it into view before clicking, validating the compact UX rather than injecting an impossible off-screen touch.
+4. All-time initially queried the same facts separately for PR5 metrics and PR6 analytics → now shares one transient deferred query.
+5. Compose empty-state test used fragile text containment → changed to exact semantics.
+6. Compose test rule v2 exposed synchronization assumptions → assertions moved to observable UI semantics.
+7. Compact CI emulator revealed `Volumen` was outside the horizontal viewport → test now scrolls it into view before clicking, validating real compact UX.
 
-## 8. PR6 non-scope
-
-PR6 does **not** include:
-- backup/restore/CSV export;
-- cloud sync;
-- accounts/login;
-- Health Connect;
-- Wear OS;
-- AI coaching/recommendations;
-- progression prescription;
-- ads or paid features.
-
-These remain later-stage work.
-
-## 9. CI contract
+## 8. CI contract
 
 Android CI runs on PRs and pushes to `main`:
 1. JDK/Android/Gradle setup;
@@ -354,35 +278,45 @@ Android CI runs on PRs and pushes to `main`:
 10. upload `gymtracker-debug-apk` (14 days).
 
 Closure rule:
-- never call a PR complete because an older head was green;
-- the **exact final PR head** must pass all steps and expose both artifacts;
-- review threads/scope/privacy/schema/UX/performance/mergeability are rechecked before ready;
-- merge with expected final head SHA;
-- verify issue closure and post-merge `main` CI/artifacts;
-- update this handoff on `main` with final IDs;
-- verify the resulting documentation head CI before treating the closure record as fully known-good.
+- exact final PR head must pass all steps and expose both artifacts;
+- review threads/scope/privacy/schema/UX/performance/mergeability are checked before ready;
+- merge uses expected final head SHA;
+- issue closure and post-merge `main` CI/artifacts are verified;
+- final handoff is committed to `main` and that documentation-only head CI must pass.
 
-## 10. Roadmap
+## 9. Roadmap
 
 - PR #1 — Android foundation — MERGED.
 - PR #2 / Issue #2 — Room local data foundation — MERGED / COMPLETED.
 - PR #3 / Issue #3 — Exercises and Routine Editor — MERGED / COMPLETED.
 - PR #4 / Issue #4 — Workout Logger — MERGED / COMPLETED.
 - PR #5 / Issue #5 — Unlimited History and PR Engine — MERGED / COMPLETED.
-- PR #6 / Issue #6 — Progress Analytics — **IMPLEMENTATION GREEN; FINAL DOCUMENTATION CI / READY / MERGE STILL PENDING at this handoff**.
-- PR #7 / Issue #7 — Backup, Restore, CSV Export — **NEXT AFTER PR6, BUT DO NOT START until the user explicitly continues**.
+- PR #6 / Issue #6 — Progress Analytics — **MERGED / COMPLETED**.
+- PR #7 / Issue #7 — Backup, Restore, CSV Export — **NEXT, BUT DO NOT START until the user explicitly continues**.
 - PR #8 / Issue #8 — V1 UX / reliability hardening.
 - Issue #9 — post-V1 Health Connect recovery context.
 - Issue #10 — post-V1 Wear OS companion.
 
+## 10. PR7 known contract — not started
+
+Issue #7 remains open. Current scope:
+- versioned portable export format;
+- include schema version, generated timestamp and app version;
+- integrity validation;
+- import preview with record counts;
+- safe restore that never silently overwrites existing data;
+- human-readable CSV workout export;
+- evaluate Android Auto Backup only as additional convenience, never the sole backup path;
+- round-trip tests;
+- corrupt/incompatible imports fail safely;
+- CI + `PROJECT_CONTEXT.md` update required.
+
+No PR7 branch or implementation is created by this handoff.
+
 ## 11. Next action from this handoff
 
-1. Verify real GitHub state first; GitHub is the source of truth.
-2. For PR #15, wait for the `PROJECT_CONTEXT.md` documentation head created from this handoff to pass full Android CI.
-3. Recheck exact final head, artifacts, changed-file scope, privacy, schema v2, review threads and mergeability.
-4. Update PR #15 description with the exact final-head CI/artifact IDs.
-5. Mark PR #15 ready only after all gates are green.
-6. Squash merge with `expected_head_sha` pinned to that exact green final head.
-7. Verify Issue #6 is closed/completed and post-merge `main` CI + both artifacts pass.
-8. Update `PROJECT_CONTEXT.md` on `main` with final PR6 merge/post-merge identifiers and verify the documentation-only `main` CI.
-9. **Do not start PR7 silently.** After PR6 is fully closed, provide the complete PR7 continuation prompt and wait for explicit user continuation.
+1. Verify real GitHub state first; `main` is the source of truth.
+2. PR6 is closed. Do not reopen or rewrite its semantics unless a concrete regression is found.
+3. Verify the CI triggered by this documentation-only `main` commit; PR6 closure is fully known-good only when that run passes.
+4. **Do not start PR7 silently.** Wait for explicit user continuation.
+5. When the user continues, inspect Issue #7 and current `main`, research current official Android/Storage Access Framework/backup guidance as necessary, design PR7 before implementation, preserve all PR1–PR6 invariants, and keep export/restore user-owned, offline-first and safe by default.

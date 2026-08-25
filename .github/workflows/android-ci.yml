@@ -24,10 +24,40 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
+      - name: Snapshot committed Room schemas
+        run: |
+          mkdir -p /tmp/committed-room-schemas
+          cp -R app/schemas/. /tmp/committed-room-schemas/
       - name: Unit tests
         run: gradle testDebugUnitTest --stacktrace
       - name: Verify Room schema is committed
-        run: git diff --exit-code -- app/schemas
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import sys
+
+          expected_root = Path('/tmp/committed-room-schemas')
+          actual_root = Path('app/schemas')
+          expected = {p.relative_to(expected_root) for p in expected_root.rglob('*.json')}
+          actual = {p.relative_to(actual_root) for p in actual_root.rglob('*.json')}
+          if expected != actual:
+              print('Room schema file set changed.')
+              print('Missing from commit:', sorted(map(str, actual - expected)))
+              print('No longer generated:', sorted(map(str, expected - actual)))
+              sys.exit(1)
+
+          mismatches = []
+          for relative in sorted(expected, key=str):
+              committed = json.loads((expected_root / relative).read_text())
+              generated = json.loads((actual_root / relative).read_text())
+              if committed != generated:
+                  mismatches.append(str(relative))
+          if mismatches:
+              print('Generated Room schemas differ semantically from committed schemas:')
+              print('\n'.join(mismatches))
+              sys.exit(1)
+          PY
       - name: Upload generated Room schema
         uses: actions/upload-artifact@v4
         with:

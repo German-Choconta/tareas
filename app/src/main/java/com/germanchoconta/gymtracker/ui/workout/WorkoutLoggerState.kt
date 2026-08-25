@@ -123,8 +123,8 @@ fun hasMeaningfulIncompleteData(state: WorkoutLoggerUiState): Boolean =
     state.exercises.any { exercise ->
         exercise.sets.any { set ->
             !set.completed && (
-                WorkoutInputValidation.loadGrams(set.loadText)?.let { it > 0L } == true ||
-                    WorkoutInputValidation.reps(set.repsText)?.let { it > 0 } == true ||
+                set.loadText.isNotBlank() ||
+                    set.repsText.isNotBlank() ||
                     set.rirText.isNotBlank() ||
                     set.type != SetTypes.WORK
                 )
@@ -295,7 +295,7 @@ class WorkoutLoggerViewModel(
     }
 
     fun requestFinish() {
-        if (_uiState.value.incompleteSetCount > 0) {
+        if (hasMeaningfulIncompleteData(_uiState.value)) {
             _uiState.update { it.copy(confirmFinish = true) }
         } else {
             finishConfirmed()

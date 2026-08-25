@@ -245,7 +245,7 @@ object PersonalRecordEngine {
     ): Long? {
         val bucketDenominator = BigInteger.valueOf(denominator.toLong())
             .multiply(BigInteger.valueOf(incrementGrams))
-        val half = bucketDenominator.divide(BigInteger.TWO)
+        val half = bucketDenominator.divide(BigInteger.valueOf(2L))
         val buckets = numerator.add(half).divide(bucketDenominator)
         return try {
             buckets.multiply(BigInteger.valueOf(incrementGrams)).longValueExact()

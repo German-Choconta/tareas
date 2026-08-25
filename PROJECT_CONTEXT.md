@@ -1,7 +1,7 @@
 # GymTracker — Project Context & Continuity
 
 > Canonical handoff. Read this first in every GymTracker session, then verify everything directly in GitHub. **GitHub is the source of truth if this file is stale.**
-> Last updated: 2026-08-25 (America/Bogota), during finalization of PR7 / Issue #7.
+> Last updated: 2026-08-25 (America/Bogota), after PR7 / Issue #7 merged and the post-merge `main` CI passed.
 
 ## 0. Repository, safety, and permanent direction
 
@@ -15,7 +15,7 @@
 - `WorkoutSet` remains canonical truth. PRs, e1RM, volume, trends, charts, CSV and analytics are derived/recalculable/read-only representations.
 - Work autonomously in GitHub, but do not advance stages silently. Do not start the next PR until the user explicitly continues.
 
-## 1. Completed stages through PR6
+## 1. Completed stages through PR7
 
 ### PR #1 — Android foundation
 - MERGED.
@@ -62,6 +62,22 @@
 - Post-merge artifacts: `gymtracker-debug-apk` `9571975063`; `gymtracker-room-schema` `9571833494`.
 - Final PR6 documentation commit on `main`: `1905412984ad4b8c04b9937e47844f8b149c4b9f`.
 - Documentation-head CI: `32871077072` (#131) — SUCCESS.
+
+### PR #16 / Issue #7 — Backup, Restore and CSV Export
+- MERGED / COMPLETED.
+- Branch: `feat/backup-restore-csv`, based on PR6 documentation head `1905412984ad4b8c04b9937e47844f8b149c4b9f`.
+- Last green implementation head before final handoff: `2085fb359ced6a1141eacb785a26aee8e44004a5`.
+- Implementation CI: `32877992647` (#149) — SUCCESS.
+- Implementation artifacts: `gymtracker-debug-apk` `9574836962`; `gymtracker-room-schema` `9574707561`.
+- Final PR head: `b35f8008a3bb787501095a15730de835621f45c1`.
+- Final PR Android CI: `32878707782` (#150) — SUCCESS.
+- Final PR artifacts: `gymtracker-debug-apk` `9575115156`; `gymtracker-room-schema` `9574981591`.
+- Final audit: 24 GymTracker/documentation files; no Pulso changes; Room schema v2 preserved; no submitted reviews; no inline review threads; mergeable before merge; no broad storage permission added.
+- Squash merge: `3b949d0127875c115d15a49ad04ae3423836374a`.
+- Issue #7 closed/completed.
+- Post-merge `main` Android CI: `32879392178` (#151) — SUCCESS.
+- Post-merge artifacts: `gymtracker-debug-apk` `9575355388`; `gymtracker-room-schema` `9575229164`.
+- This merged-state handoff is documentation-only. Verify the CI for the exact documentation head before treating the final closure record as fully known-good.
 
 ## 2. Android/toolchain baseline
 
@@ -139,18 +155,7 @@ Definitions retained:
 
 PR6 Progress keeps analytics derived/recalculable. It offers Load, Reps at exact load, e1RM, Volume and Frequency; custom dates are inclusive in UI and represented internally as `[startOfDay(start), startOfDay(end + 1))`; missing performance dates are not synthetic zeroes; finite frequency buckets may contain explicit zeroes. Vico and `Double` remain renderer-only. All-time fact loading is shared transiently between PR5 and PR6 calculations, never persisted as truth.
 
-## 5. PR7 / Issue #7 — Backup, Restore and CSV Export — FINALIZATION IN PR #16
-
-GitHub source of truth:
-- PR: **#16 — GymTracker PR 7: Backup, restore, and CSV export**.
-- Branch: `feat/backup-restore-csv`, based on PR6 documentation head `1905412984ad4b8c04b9937e47844f8b149c4b9f`.
-- Issue #7 remains open until squash merge.
-- Last fully green implementation head before this documentation commit: `2085fb359ced6a1141eacb785a26aee8e44004a5`.
-- Android CI for that implementation head: `32877992647` (#149) — **SUCCESS**.
-- Artifacts: `gymtracker-room-schema` `9574707561`; `gymtracker-debug-apk` `9574836962`.
-- The PR must remain DRAFT until the exact head containing this handoff update also passes the entire CI contract and exposes both artifacts.
-
-### PR7 design
+## 5. PR7 / Issue #7 — Backup, Restore and CSV Export — COMPLETED
 
 Design spec: `docs/PR7_BACKUP_RESTORE_SPEC.md`.
 
@@ -227,17 +232,17 @@ Instrumented/state/UI coverage includes:
 - double-confirm protection and safe corrupt/IO error state;
 - SAF actions/MIME types and picker cancellation no-op;
 - accessible destructive confirmation;
-- API 35 connected test suite currently contains 45 tests and passed 45/45 on CI #149.
+- API 35 connected suite contains 45 tests and passed 45/45 on the green PR7 CI path.
 
 All fixtures are synthetic and non-identifying.
 
 ### PR7 issues corrected during implementation/finalization
 
-1. Initial Compose instrumented test imported nonexistent top-level `androidx.compose.ui.test.assertExists` → removed the invalid import; `assertExists()` remains the member assertion on `SemanticsNodeInteraction`.
-2. Action mutex acquisition initially occurred after coroutine launch, allowing rapid taps to enqueue competing operations → mutex is acquired synchronously with `tryLock()` before launch.
-3. Picker cancellation behavior was correct via nullable URI handling but not independently demonstrated → centralized `dispatchDocumentUri` no-op behavior and added a dedicated test.
-4. Initial confirmation UI test coupled a synthetic recomposition transition with the dialog assertion and proved flaky on the API 35 emulator → split into deterministic UI-state tests, while `BackupViewModelTest` independently proves preview → confirmation → single restore.
-5. The API 35 CI emulator uses a small 320×640 viewport; the destructive preview action existed but was below the viewport, so a direct test click did not dispatch the callback → the interaction now calls `performScrollTo().performClick()` and synchronizes with Compose. CI #149 then passed all 45 instrumented tests.
+1. Removed an invalid top-level Compose test `assertExists` import; the valid member assertion remains on `SemanticsNodeInteraction`.
+2. Moved action mutex acquisition to synchronous `tryLock()` before coroutine launch so rapid taps cannot enqueue competing operations.
+3. Centralized picker URI dispatch and added dedicated cancellation no-op coverage.
+4. Split a flaky synthetic recomposition/dialog assertion into deterministic UI-state tests; `BackupViewModelTest` independently proves preview → confirmation → single restore.
+5. On the API 35 320×640 CI viewport, the destructive preview action required `performScrollTo().performClick()` plus Compose synchronization; the final connected suite passed.
 
 ### Known deliberate limitations
 
@@ -264,12 +269,12 @@ Android CI runs on PRs and pushes to `main`:
 9. assemble debug APK;
 10. upload `gymtracker-debug-apk`.
 
-Closure rule:
+Closure rule for completed stages:
 - exact final PR head must pass every step and expose both artifacts;
-- review threads, scope, privacy, schema, restore atomicity, UX, performance and mergeability are audited before ready;
+- review threads, scope, privacy, schema, atomicity, UX, performance and mergeability are audited before ready;
 - merge uses squash with `expected_head_sha`;
-- Issue #7 closure and post-merge `main` CI/artifacts are verified;
-- a final merged-state handoff is then committed to `main`, and that documentation head CI must also pass.
+- linked issue closure and post-merge `main` CI/artifacts are verified;
+- the final merged-state handoff is committed to `main`, and that exact documentation head CI must pass.
 
 ## 7. Roadmap
 
@@ -279,17 +284,15 @@ Closure rule:
 - PR #4 / Issue #4 — Workout Logger — MERGED / COMPLETED.
 - PR #5 / Issue #5 — Unlimited History and PR Engine — MERGED / COMPLETED.
 - PR #6 / Issue #6 — Progress Analytics — MERGED / COMPLETED.
-- PR #7 / Issue #7 — Backup, Restore and CSV Export — **PR #16 FINALIZATION IN PROGRESS; DO NOT TREAT AS MERGED UNTIL GITHUB CONFIRMS IT**.
-- PR #8 / Issue #8 — V1 UX / reliability hardening — **DO NOT START during PR7**.
+- PR #7 / Issue #7 — Backup, Restore and CSV Export — **MERGED / COMPLETED**.
+- PR #8 / Issue #8 — V1 UX / reliability hardening — **NEXT STAGE; DO NOT START UNTIL THE USER EXPLICITLY CONTINUES**.
 - Issue #9 — post-V1 Health Connect recovery context.
 - Issue #10 — post-V1 Wear OS companion.
 
 ## 8. Next action from this handoff
 
-1. Verify PR #16 exact current head and its Android CI.
-2. Do not mark ready unless that exact head passes JVM tests, semantic schema verification, API 35 instrumented tests, lint, assemble, and exposes both required artifacts.
-3. Audit no Pulso changes, no real/private data, no unresolved review threads, mergeability and schema v2 preservation.
-4. Mark PR #16 ready only after the audit; squash-merge with `expected_head_sha`.
-5. Verify Issue #7 closed/completed and post-merge `main` CI + artifacts.
-6. Update this file on `main` with final PR7 hashes/CI/artifacts and verify the documentation-head CI.
-7. **Do not start PR8 silently.** After PR7 is completely closed, read Issue #8 and provide the user the full standalone PR8 continuation prompt.
+1. Verify the Android CI for the exact documentation-only `main` head created by this handoff update.
+2. Do not treat the final PR7 closure record as fully known-good until that CI passes the full contract and exposes both artifacts.
+3. **Do not start PR8 silently.**
+4. After PR7 closure verification is complete, read Issue #8 and provide the user the full standalone PR8 continuation prompt.
+5. Only when the user explicitly continues PR8: re-read this file, verify GitHub source of truth, inspect Issue #8, then branch and implement from the verified current `main` head.

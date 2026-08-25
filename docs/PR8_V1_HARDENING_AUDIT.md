@@ -2,71 +2,95 @@
 
 Date: 2026-08-25 (America/Bogota)
 
-This document records the evidence-based audit that starts Issue #8. It does not expand GymTracker product scope.
+This document records the evidence-based audit for Issue #8. It does not expand GymTracker product scope.
 
 ## Verified baseline
 
 - Base `main`: `f0a5ccb4427ec133b3e7c08806eec54c2e481d37`.
 - PR7 squash parent: `3b949d0127875c115d15a49ad04ae3423836374a`.
 - PR7 documentation-head Android CI #152 / run `32880182711`: SUCCESS.
+- PR7 documentation-head artifacts: debug APK `9575588354`; Room schema `9575490321`.
 - Room database version remains **2**; schemas v1 and v2 are committed.
-- Release build is configured with code minification and resource shrinking, but the pre-PR8 CI contract only assembles debug.
+- The release variant is already configured with code minification and resource shrinking, but the pre-PR8 CI contract only assembled debug.
 
 ## Evidence and decisions
 
 ### Accessibility and touch targets
 
-Material/Compose built-ins already provide useful semantics and minimum interactive sizing in many places, so PR8 will not add redundant descriptions everywhere. The audit found a small number of concrete issues:
+Material/Compose built-ins already provide useful semantics and minimum interactive sizing in many places, so PR8 does not add redundant descriptions everywhere. The audit found concrete issues and hardened them:
 
-- top-level create FABs render a raw `+` rather than exposing a specific create action;
-- major long-form sections are visually headings but not marked as accessibility headings;
-- some critical changing status/error content can be announced more clearly;
-- critical custom/clickable rows must retain at least a 48 dp interactive target;
-- the workout set editor places load/reps/RIR in three columns even on the 320 dp-wide CI viewport, which is unnecessarily cramped.
+- top-level create FABs exposed only a visual `+`; they now expose specific “Crear ejercicio” / “Crear rutina” actions;
+- the workout exercise title is explicitly a semantic heading;
+- initial app loading and recoverable history errors expose meaningful live status instead of an unlabeled spinner/error-only line;
+- critical custom/clickable controls retain Material minimum interactive sizing;
+- the workout set editor no longer forces load/reps/RIR into three narrow columns on the 320 dp-wide CI-sized viewport; below 360 dp it stacks the three inputs vertically;
+- critical Compose tests opt into the official Compose accessibility-test bridge on the API 35 CI device, covering labels, traversal/semantics, contrast and touch-target checks supported by the framework.
+
+No production accessibility dependency was introduced; the accessibility bridge is `androidTestImplementation` only.
 
 ### State restoration
 
-Room remains canonical for workouts and the rest timer. The workout ViewModel already recovers the active workout from Room, and the rest timer stores an absolute end timestamp. PR8 will not duplicate these facts in saved UI state.
+Room remains canonical for workouts and the rest timer. The workout ViewModel recovers the active workout from Room, and the rest timer stores an absolute end timestamp. PR8 does not duplicate those facts in saved UI state.
 
-Ephemeral modal state that is safe to recreate (exercise picker, replace picker, completed-set delete confirmation, set-type menu) currently uses `remember`; it can use `rememberSaveable` without changing canonical data. The PR7 import-preview limitation remains unchanged: process death can require re-selecting the file.
+Ephemeral modal state that is safe to recreate (exercise picker, replace picker, completed-set delete confirmation and set-type menu) now uses `rememberSaveable`. Existing `SavedStateHandle` state in History/Progress remains responsible for selected exercise, detail tab and appropriate progress filters. The PR7 import-preview limitation is unchanged: process death during an import preview can require re-selecting the file, because the decoded replacement dataset is deliberately not copied into UI saved state.
 
 ### Destructive actions
 
-Archive and restore already have explicit confirmations. Backup replace already has synchronous double-confirm protection from PR7. The workout finish path flushes autosaves before mutation, but the UI state does not currently gate repeated finish confirmation taps. PR8 will add an in-flight finishing guard without changing finish semantics.
+Archive and restore already had explicit confirmations. Backup replace already had synchronous double-confirm protection from PR7.
+
+Workout finish now has two additional safeguards without changing historical semantics:
+
+- the ViewModel sets an in-flight `finishing` guard synchronously before launching the finish coroutine, so repeated taps cannot queue competing finish operations;
+- the Room update is checked by affected-row count (`WHERE finishedAt IS NULL`), so only the first valid transition can report success.
+
+Pending set/note autosaves are still flushed before `finishedAt` is written.
 
 ### Database/query performance
 
-The active-workout load path contains evidenced N+1 reads:
+The active-workout hot path contained two evidenced N+1 patterns and both were removed without a schema change:
 
-- `WorkoutRepository.getAggregate()` loads workout exercises and then runs one set query per exercise;
-- workout UI hydration looks up the current `ExerciseEntity` once per workout exercise;
-- routine-editor hydration looks up exercise names one by one.
+- `WorkoutRepository.getAggregate()` previously loaded one set list per workout exercise; it now performs one ordered set query for the whole workout and groups the result in memory;
+- workout UI hydration previously loaded the current `ExerciseEntity` once per workout exercise; it now batches current exercise rows with a single `IN (...)` query.
 
-PR8 will replace only these evidenced loops with batched Room queries. No index/schema migration is justified by current evidence, so schema v2 will remain unchanged.
+The routine editor also resolves exercise names item-by-item, but it is an explicit editor-open path over the already bounded routine template rather than the startup/logger hot path. No benchmark or latency evidence currently justifies widening PR8 further there, so that read pattern is documented rather than changed. Likewise, no new index or schema migration is justified by the audited queries. Room schema **v2** therefore remains unchanged.
+
+PREVIOUS lookup is intentionally still per workout exercise because each exercise can have a different reference mode and routine context; collapsing that logic without evidence would risk changing logger semantics.
 
 ### Empty/loading/error states
 
-Exercises, routines, backup and analytics already contain meaningful empty/error states. Raw paged history has an error message but no retry action and does not expose an equally clear refresh loading state. PR8 will harden that flow without changing Paging retention semantics.
+Exercises, routines, backup and analytics already had meaningful empty/error states. Raw paged history now adds:
+
+- explicit refresh loading;
+- explicit empty-detail state;
+- recoverable refresh error with a `retry()` action;
+- append loading and append-error retry.
+
+These changes do not alter Paging retention semantics or canonical history.
 
 ### Light/dark theme
 
-The app already follows `isSystemInDarkTheme()` and uses Material 3 color schemes. The audited critical UI uses `MaterialTheme.colorScheme` rather than fixed light-only colors. PR8 will preserve that architecture and add regression coverage rather than introduce a new theme system.
+The app already follows `isSystemInDarkTheme()` and uses Material 3 light/dark color schemes. The audited critical UI relies on `MaterialTheme.colorScheme` rather than fixed light-only colors. PR8 preserves that architecture instead of introducing another theme system. Automated accessibility checks run against critical Material content, while the release audit verifies there are no new hard-coded theme-breaking colors.
 
-### Startup/release
+### Startup and release
 
-Database construction is an application-context singleton. No new startup framework or Baseline Profile dependency is justified by current evidence. The concrete release-readiness gap is CI: the real minified/resource-shrunk release variant is not assembled. PR8 will add the release build to CI and publish its APK artifact if produced.
+Database construction remains an application-context singleton. No new startup framework or Baseline Profile dependency is justified by current evidence; adding one solely because it exists would increase build/runtime surface without a measured startup bottleneck.
 
-## Planned automated evidence
+The concrete release-readiness gap is fixed in CI: after debug assembly, CI now assembles the real minified/resource-shrunk release variant and uploads `gymtracker-release-apk`. A missing or failing release APK therefore fails the PR contract.
 
-- Compose semantics tests for specific create actions and important state semantics.
-- Narrow-width workout-set layout regression coverage.
-- Workout finish in-flight guard coverage.
-- Existing active-workout/rest-timer persistence coverage retained and strengthened where useful.
-- Batched aggregate hydration persistence test with synthetic multi-exercise data.
-- History paging error/retry UI coverage where deterministic.
-- CI debug + connected tests + lint + **release** assembly.
+## Automated evidence added in PR8
 
-All test data remains synthetic and non-identifying.
+Synthetic tests cover:
+
+- specific accessible top-level create actions;
+- official Compose accessibility checks on critical UI;
+- 320×640-class narrow workout layout with reachable load/reps/RIR, complete and delete controls;
+- batched multi-exercise aggregate hydration while preserving deterministic set ordering;
+- atomic/idempotent workout finish, preserving the first exact `finishedAt`;
+- all pre-existing PR4–PR7 persistence, history, analytics, backup/restore and UI tests remain part of the same connected suite.
+
+The CI contract now includes JVM tests, semantic Room schema verification, API 35 connected tests, lint, debug assembly, **release assembly**, and Room/debug/release artifacts.
+
+All test data is synthetic and non-identifying.
 
 ## Explicit non-scope
 

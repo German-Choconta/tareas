@@ -16,7 +16,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -89,7 +91,6 @@ private fun HistoryDetail(
     viewModel: HistoryViewModel,
     onBack: () -> Unit,
 ) {
-    val historyItems = viewModel.historyItems.collectAsLazyPagingItems()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -102,35 +103,101 @@ private fun HistoryDetail(
             )
         },
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            item(key = "records") { HistoryRecordSummary(state.records, state.loadingMetrics) }
-            item(key = "comparison") { HistoryPreviousComparison(state.comparison) }
-            item(key = "raw-title") {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Sets originales", style = MaterialTheme.typography.titleLarge)
-                    Text("Los records complementan los datos guardados; no los reemplazan.")
-                }
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            HistoryDetailSectionTabs(
+                selected = state.detailSection,
+                onSelected = viewModel::selectDetailSection,
+            )
+            when (state.detailSection) {
+                HistoryDetailSection.HISTORY -> HistoryRawHistoryContent(state, viewModel)
+                HistoryDetailSection.PROGRESS -> ProgressHistoryContent(state.progress, viewModel)
             }
-            items(
-                count = historyItems.itemCount,
-                key = historyItems.itemKey { it.stableKey },
-            ) { index ->
-                when (val item = historyItems[index]) {
-                    is HistoryListItem.SessionHeader -> HistorySessionHeader(item)
-                    is HistoryListItem.SetItem -> HistoryRawSetRow(item)
-                    null -> Unit
-                }
+        }
+    }
+}
+
+@Composable
+internal fun HistoryDetailSectionTabs(
+    selected: HistoryDetailSection,
+    onSelected: (HistoryDetailSection) -> Unit,
+) {
+    PrimaryTabRow(selectedTabIndex = selected.ordinal) {
+        HistoryDetailSection.entries.forEach { section ->
+            Tab(
+                selected = selected == section,
+                onClick = { onSelected(section) },
+                text = {
+                    Text(
+                        when (section) {
+                            HistoryDetailSection.HISTORY -> "Historial"
+                            HistoryDetailSection.PROGRESS -> "Progreso"
+                        },
+                    )
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun HistoryRawHistoryContent(
+    state: HistoryUiState,
+    viewModel: HistoryViewModel,
+) {
+    val historyItems = viewModel.historyItems.collectAsLazyPagingItems()
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item(key = "records") { HistoryRecordSummary(state.records, state.loadingMetrics) }
+        item(key = "comparison") { HistoryPreviousComparison(state.comparison) }
+        item(key = "raw-title") {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Sets originales", style = MaterialTheme.typography.titleLarge)
+                Text("Los records complementan los datos guardados; no los reemplazan.")
             }
-            if (historyItems.loadState.refresh is LoadState.Error) {
-                item(key = "history-error") { Text("No se pudo cargar el historial.") }
+        }
+        items(
+            count = historyItems.itemCount,
+            key = historyItems.itemKey { it.stableKey },
+        ) { index ->
+            when (val item = historyItems[index]) {
+                is HistoryListItem.SessionHeader -> HistorySessionHeader(item)
+                is HistoryListItem.SetItem -> HistoryRawSetRow(item)
+                null -> Unit
             }
-            if (historyItems.loadState.append is LoadState.Loading) {
-                item(key = "history-more") { Text("Cargando más historial…") }
-            }
+        }
+        if (historyItems.loadState.refresh is LoadState.Error) {
+            item(key = "history-error") { Text("No se pudo cargar el historial.") }
+        }
+        if (historyItems.loadState.append is LoadState.Loading) {
+            item(key = "history-more") { Text("Cargando más historial…") }
+        }
+    }
+}
+
+@Composable
+private fun ProgressHistoryContent(
+    state: ProgressUiState,
+    viewModel: HistoryViewModel,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 12.dp, top = 12.dp, end = 12.dp, bottom = 24.dp),
+    ) {
+        item(key = "progress-analytics") {
+            ProgressAnalyticsContent(
+                state = state,
+                onRangeModeChange = viewModel::setProgressRangeMode,
+                onStartDateChange = viewModel::setCustomStartDate,
+                onEndDateChange = viewModel::setCustomEndDate,
+                onMetricChange = viewModel::setProgressMetric,
+                onExactLoadChange = viewModel::setExactLoad,
+                onFrequencyBucketChange = viewModel::setFrequencyBucketSize,
+                onPreviousPoint = viewModel::selectPreviousProgressPoint,
+                onNextPoint = viewModel::selectNextProgressPoint,
+            )
         }
     }
 }

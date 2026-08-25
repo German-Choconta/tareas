@@ -15,6 +15,8 @@ object SetTypes {
     const val WORK = "WORK"
     const val DROP = "DROP"
     const val FAILURE = "FAILURE"
+
+    val all = listOf(WARMUP, WORK, DROP, FAILURE)
 }
 
 object MuscleRoles {
@@ -144,6 +146,10 @@ data class WorkoutEntity(
     val startedAt: Long,
     val finishedAt: Long? = null,
     val notes: String? = null,
+    /** Absolute wall-clock timestamp. Remaining rest is derived as endsAt - now. */
+    val restTimerEndsAt: Long? = null,
+    /** WorkoutExercise that owns the currently active rest timer, when any. */
+    val restTimerWorkoutExerciseId: String? = null,
 )
 
 @Entity(
@@ -182,6 +188,14 @@ data class WorkoutExerciseEntity(
     val routineExerciseId: String? = null,
     val position: Int,
     val notes: String? = null,
+    /** PR4 snapshot. Null only for legacy v1 rows created before workout targets existed. */
+    val targetSetCount: Int? = null,
+    val repMin: Int? = null,
+    val repMax: Int? = null,
+    val targetRirTenths: Int? = null,
+    val restSeconds: Int? = null,
+    val loadIncrementGrams: Long? = null,
+    val previousReferenceMode: String? = null,
 )
 
 @Entity(

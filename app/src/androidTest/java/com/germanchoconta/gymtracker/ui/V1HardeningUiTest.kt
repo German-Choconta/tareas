@@ -117,11 +117,11 @@ class V1HardeningUiTest {
         }
 
         composeRule.onRoot().tryPerformAccessibilityChecks()
-        composeRule.onNodeWithText("Carga (kg)").assertIsDisplayed()
-        composeRule.onNodeWithText("Reps").assertIsDisplayed()
-        composeRule.onNodeWithText("RIR").assertIsDisplayed()
+        composeRule.onNodeWithText("Carga (kg)").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Reps").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("RIR").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Completar serie").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("Borrar serie 1").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Borrar serie 1").performScrollTo().assertIsDisplayed()
     }
 
     @Test

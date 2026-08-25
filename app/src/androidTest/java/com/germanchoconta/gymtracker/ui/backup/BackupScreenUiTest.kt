@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -108,6 +109,10 @@ class BackupScreenUiTest {
         assertEquals(0, confirmations)
 
         composeRule.onNodeWithText("Revisar reemplazo").performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule.onAllNodesWithText("Reemplazar todos los datos locales")
+                .fetchSemanticsNodes().isNotEmpty()
+        }
         composeRule.onNodeWithText("Reemplazar todos los datos locales").assertExists()
         composeRule.onNodeWithContentDescription(
             "Confirmar reemplazo destructivo de todos los datos locales",

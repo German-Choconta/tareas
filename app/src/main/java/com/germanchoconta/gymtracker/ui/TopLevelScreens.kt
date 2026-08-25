@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
@@ -20,7 +21,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -46,7 +46,7 @@ internal fun ExerciseTopLevelScreen(
         topBar = { TopAppBar(title = { Text("Ejercicios") }) },
         floatingActionButton = {
             FloatingActionButton(onClick = onCreateExercise) {
-                Text("+", style = MaterialTheme.typography.headlineSmall)
+                Icon(Icons.Default.Add, contentDescription = "Crear ejercicio")
             }
         },
     ) { padding ->
@@ -73,7 +73,7 @@ internal fun ExerciseTopLevelScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         if (state.query.isBlank()) "Aún no hay ejercicios" else "No hay coincidencias",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
                     )
                     Text(
                         if (state.query.isBlank()) "Crea tu primer ejercicio con el botón +."
@@ -96,7 +96,7 @@ internal fun ExerciseTopLevelScreen(
                                 if (details.isNotEmpty()) Text(details.joinToString(" · "))
                             },
                             trailingContent = {
-                                Icon(Icons.Default.Edit, contentDescription = "Editar ${exercise.name}")
+                                Icon(Icons.Default.Edit, contentDescription = null)
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -122,7 +122,7 @@ internal fun RoutineTopLevelScreen(
         topBar = { TopAppBar(title = { Text("Rutinas") }) },
         floatingActionButton = {
             FloatingActionButton(onClick = onCreateRoutine) {
-                Text("+", style = MaterialTheme.typography.headlineSmall)
+                Icon(Icons.Default.Add, contentDescription = "Crear rutina")
             }
         },
     ) { padding ->
@@ -131,7 +131,10 @@ internal fun RoutineTopLevelScreen(
                 modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("Aún no hay rutinas", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Aún no hay rutinas",
+                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                )
                 Text("Crea una rutina con el botón + y agrega ejercicios en orden.")
             }
         } else {

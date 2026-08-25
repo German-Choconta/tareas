@@ -76,6 +76,8 @@ dependencies {
     testImplementation("androidx.paging:paging-testing:3.5.1")
 
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    // Official Compose Accessibility Test Framework bridge (API 34+); CI runs API 35.
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4-accessibility")
     androidTestImplementation("androidx.room3:room3-testing:3.0.1")
     androidTestImplementation("androidx.test:core:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")

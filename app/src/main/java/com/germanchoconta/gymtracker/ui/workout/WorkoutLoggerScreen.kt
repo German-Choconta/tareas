@@ -3,6 +3,7 @@ package com.germanchoconta.gymtracker.ui.workout
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -25,7 +26,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -45,12 +45,14 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
@@ -60,6 +62,8 @@ import com.germanchoconta.gymtracker.data.local.SetTypes
 import com.germanchoconta.gymtracker.ui.management.gramsToKilogramsText
 import com.germanchoconta.gymtracker.ui.management.rirTenthsToText
 import kotlinx.coroutines.delay
+
+private val NARROW_SET_EDITOR_WIDTH = 360.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,9 +87,9 @@ internal fun WorkoutLoggerScreen(
     onMessageShown: () -> Unit,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
-    var addExerciseOpen by remember { mutableStateOf(false) }
-    var replaceWorkoutExerciseId by remember { mutableStateOf<String?>(null) }
-    var deleteCompletedSetId by remember { mutableStateOf<String?>(null) }
+    var addExerciseOpen by rememberSaveable { mutableStateOf(false) }
+    var replaceWorkoutExerciseId by rememberSaveable { mutableStateOf<String?>(null) }
+    var deleteCompletedSetId by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(state.message) {
         val message = state.message ?: return@LaunchedEffect
@@ -282,7 +286,7 @@ private fun WorkoutExerciseCard(
                 Text(
                     exercise.exerciseName,
                     style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).semantics { heading() },
                 )
                 TextButton(onClick = onReplace, modifier = Modifier.minimumInteractiveComponentSize()) {
                     Text("Cambiar")
@@ -346,7 +350,7 @@ private fun WorkoutSetEditor(
     val repsFocus = remember { FocusRequester() }
     val rirFocus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
-    var typeMenuOpen by remember(set.id) { mutableStateOf(false) }
+    var typeMenuOpen by rememberSaveable(set.id) { mutableStateOf(false) }
 
     Surface(
         shape = MaterialTheme.shapes.medium,
@@ -393,53 +397,80 @@ private fun WorkoutSetEditor(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.Top,
-            ) {
-                OutlinedTextField(
-                    value = set.loadText,
-                    onValueChange = onLoadChange,
-                    modifier = Modifier.weight(1.25f),
-                    singleLine = true,
-                    label = { Text("kg") },
-                    isError = set.loadError != null,
-                    supportingText = set.loadError?.let { error -> { Text(error) } },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Decimal,
-                        imeAction = ImeAction.Next,
-                    ),
-                    keyboardActions = KeyboardActions(onNext = { repsFocus.requestFocus() }),
-                )
-                OutlinedTextField(
-                    value = set.repsText,
-                    onValueChange = onRepsChange,
-                    modifier = Modifier.weight(1f).focusRequester(repsFocus),
-                    singleLine = true,
-                    label = { Text("reps") },
-                    isError = set.repsError != null,
-                    supportingText = set.repsError?.let { error -> { Text(error) } },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Next,
-                    ),
-                    keyboardActions = KeyboardActions(onNext = { rirFocus.requestFocus() }),
-                )
-                OutlinedTextField(
-                    value = set.rirText,
-                    onValueChange = onRirChange,
-                    modifier = Modifier.weight(1f).focusRequester(rirFocus),
-                    singleLine = true,
-                    label = { Text("RIR") },
-                    isError = set.rirError != null,
-                    supportingText = set.rirError?.let { error -> { Text(error) } },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Decimal,
-                        imeAction = ImeAction.Done,
-                    ),
-                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                )
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val stacked = maxWidth < NARROW_SET_EDITOR_WIDTH
+
+                @Composable
+                fun LoadField(modifier: Modifier) {
+                    OutlinedTextField(
+                        value = set.loadText,
+                        onValueChange = onLoadChange,
+                        modifier = modifier,
+                        singleLine = true,
+                        label = { Text("Carga (kg)") },
+                        isError = set.loadError != null,
+                        supportingText = set.loadError?.let { error -> { Text(error) } },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Decimal,
+                            imeAction = ImeAction.Next,
+                        ),
+                        keyboardActions = KeyboardActions(onNext = { repsFocus.requestFocus() }),
+                    )
+                }
+
+                @Composable
+                fun RepsField(modifier: Modifier) {
+                    OutlinedTextField(
+                        value = set.repsText,
+                        onValueChange = onRepsChange,
+                        modifier = modifier.focusRequester(repsFocus),
+                        singleLine = true,
+                        label = { Text("Reps") },
+                        isError = set.repsError != null,
+                        supportingText = set.repsError?.let { error -> { Text(error) } },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Next,
+                        ),
+                        keyboardActions = KeyboardActions(onNext = { rirFocus.requestFocus() }),
+                    )
+                }
+
+                @Composable
+                fun RirField(modifier: Modifier) {
+                    OutlinedTextField(
+                        value = set.rirText,
+                        onValueChange = onRirChange,
+                        modifier = modifier.focusRequester(rirFocus),
+                        singleLine = true,
+                        label = { Text("RIR") },
+                        isError = set.rirError != null,
+                        supportingText = set.rirError?.let { error -> { Text(error) } },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Decimal,
+                            imeAction = ImeAction.Done,
+                        ),
+                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                    )
+                }
+
+                if (stacked) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LoadField(Modifier.fillMaxWidth())
+                        RepsField(Modifier.fillMaxWidth())
+                        RirField(Modifier.fillMaxWidth())
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        LoadField(Modifier.weight(1.25f))
+                        RepsField(Modifier.weight(1f))
+                        RirField(Modifier.weight(1f))
+                    }
+                }
             }
 
             Row(

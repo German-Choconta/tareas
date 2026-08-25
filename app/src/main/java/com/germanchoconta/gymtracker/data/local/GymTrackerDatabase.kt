@@ -74,6 +74,8 @@ class ExerciseRepository(
     fun observeAllMuscles() = muscleDao.observeAll()
     suspend fun getActive() = exerciseDao.getActive()
     suspend fun getById(id: String) = exerciseDao.getById(id)
+    suspend fun getByIds(ids: Collection<String>): List<ExerciseEntity> =
+        if (ids.isEmpty()) emptyList() else exerciseDao.getByIds(ids.distinct())
     suspend fun getAssignments(exerciseId: String) = muscleDao.getAssignments(exerciseId)
     suspend fun save(exercise: ExerciseEntity) = exerciseDao.upsert(exercise)
     suspend fun saveMuscle(muscle: MuscleEntity) = muscleDao.upsert(muscle)
@@ -179,10 +181,14 @@ class WorkoutRepository(
 
     suspend fun getAggregate(workoutId: String): WorkoutAggregate? {
         val workout = workoutDao.getWorkout(workoutId) ?: return null
-        val exercises = workoutDao.getExercises(workoutId).map { item ->
-            WorkoutExerciseWithSets(item, workoutDao.getSets(item.id))
-        }
-        return WorkoutAggregate(workout, exercises)
+        val exercises = workoutDao.getExercises(workoutId)
+        val setsByExercise = workoutDao.getSetsForWorkout(workoutId).groupBy(WorkoutSetEntity::workoutExerciseId)
+        return WorkoutAggregate(
+            workout = workout,
+            exercises = exercises.map { item ->
+                WorkoutExerciseWithSets(item, setsByExercise[item.id].orEmpty())
+            },
+        )
     }
 
     suspend fun updateSetLoad(setId: String, loadGrams: Long): Boolean =
@@ -326,8 +332,7 @@ class WorkoutRepository(
     suspend fun finishWorkout(workoutId: String, finishedAt: Long): Boolean {
         val workout = workoutDao.getWorkout(workoutId) ?: return false
         if (workout.finishedAt != null || finishedAt < workout.startedAt) return false
-        workoutDao.finishWorkout(workoutId, finishedAt)
-        return true
+        return workoutDao.finishWorkout(workoutId, finishedAt) > 0
     }
 
     suspend fun previousWorkout(

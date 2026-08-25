@@ -20,6 +20,9 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercise WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): ExerciseEntity?
 
+    @Query("SELECT * FROM exercise WHERE id IN (:ids)")
+    suspend fun getByIds(ids: List<String>): List<ExerciseEntity>
+
     @Query("UPDATE exercise SET archived = 1 WHERE id = :id")
     suspend fun archive(id: String)
 }
@@ -173,6 +176,17 @@ interface WorkoutDao {
     suspend fun getSets(workoutExerciseId: String): List<WorkoutSetEntity>
 
     @Query(
+        """
+        SELECT ws.*
+        FROM workout_set ws
+        INNER JOIN workout_exercise we ON we.id = ws.workoutExerciseId
+        WHERE we.workoutId = :workoutId
+        ORDER BY we.position ASC, we.id ASC, ws.position ASC, ws.id ASC
+        """,
+    )
+    suspend fun getSetsForWorkout(workoutId: String): List<WorkoutSetEntity>
+
+    @Query(
         "SELECT * FROM workout_set WHERE workoutExerciseId = :workoutExerciseId " +
             "AND completedAt IS NOT NULL ORDER BY position",
     )
@@ -306,7 +320,7 @@ interface WorkoutDao {
         "UPDATE workout SET finishedAt = :finishedAt, restTimerEndsAt = NULL, " +
             "restTimerWorkoutExerciseId = NULL WHERE id = :workoutId AND finishedAt IS NULL",
     )
-    suspend fun finishWorkout(workoutId: String, finishedAt: Long)
+    suspend fun finishWorkout(workoutId: String, finishedAt: Long): Int
 
     @Query("DELETE FROM workout_set WHERE id = :setId")
     suspend fun deleteSet(setId: String)

@@ -157,7 +157,7 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout WHERE id = :id LIMIT 1")
     suspend fun getWorkout(id: String): WorkoutEntity?
 
-    @Query("SELECT * FROM workout WHERE finishedAt IS NULL ORDER BY startedAt DESC LIMIT 1")
+    @Query("SELECT * FROM workout WHERE finishedAt IS NULL ORDER BY startedAt DESC, id DESC LIMIT 1")
     suspend fun getActiveWorkout(): WorkoutEntity?
 
     @Query("SELECT * FROM workout_exercise WHERE id = :id LIMIT 1")
@@ -360,7 +360,7 @@ interface WorkoutDao {
         WHERE we.exerciseId = :exerciseId
           AND w.finishedAt IS NOT NULL
           AND w.startedAt < :beforeStartedAt
-        ORDER BY w.startedAt DESC
+        ORDER BY w.startedAt DESC, w.id DESC, we.position ASC, we.id ASC
         LIMIT 1
         """,
     )
@@ -382,7 +382,7 @@ interface WorkoutDao {
           AND w.routineId = :routineId
           AND w.finishedAt IS NOT NULL
           AND w.startedAt < :beforeStartedAt
-        ORDER BY w.startedAt DESC
+        ORDER BY w.startedAt DESC, w.id DESC, we.position ASC, we.id ASC
         LIMIT 1
         """,
     )
@@ -411,7 +411,7 @@ interface WorkoutDao {
         INNER JOIN workout_exercise we ON we.workoutId = w.id
         INNER JOIN workout_set ws ON ws.workoutExerciseId = we.id
         WHERE we.exerciseId = :exerciseId
-        ORDER BY w.startedAt DESC, ws.position ASC
+        ORDER BY w.startedAt DESC, w.id DESC, we.position ASC, we.id ASC, ws.position ASC, ws.id ASC
         """,
     )
     fun observeExerciseHistory(exerciseId: String): Flow<List<ExerciseHistoryRow>>

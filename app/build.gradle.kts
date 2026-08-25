@@ -52,8 +52,11 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.paging:paging-runtime:3.5.1")
+    implementation("androidx.paging:paging-compose:3.5.1")
 
     implementation("androidx.room3:room3-runtime:3.0.1")
+    implementation("androidx.room3:room3-paging:3.0.1")
     implementation("androidx.sqlite:sqlite-bundled:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     // Room 3.0.1 migration tooling uses kotlinx.serialization 1.8.1. Keep the
@@ -67,6 +70,7 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    testImplementation("androidx.paging:paging-testing:3.5.1")
 
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.room3:room3-testing:3.0.1")

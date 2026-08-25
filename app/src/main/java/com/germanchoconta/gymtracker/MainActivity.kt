@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.germanchoconta.gymtracker.data.local.ExerciseRepository
 import com.germanchoconta.gymtracker.data.local.GymTrackerDatabase
+import com.germanchoconta.gymtracker.data.local.HistoryRepository
 import com.germanchoconta.gymtracker.data.local.RoutineRepository
 import com.germanchoconta.gymtracker.data.local.WorkoutRepository
 import com.germanchoconta.gymtracker.ui.GymTrackerApp
@@ -21,6 +22,7 @@ class MainActivity : ComponentActivity() {
             routineDao = database.routineDao(),
             exerciseDao = database.exerciseDao(),
         )
+        val historyRepository = HistoryRepository(database.historyDao())
 
         setContent {
             GymTrackerTheme {
@@ -28,6 +30,7 @@ class MainActivity : ComponentActivity() {
                     exerciseRepository = exerciseRepository,
                     routineRepository = routineRepository,
                     workoutRepository = workoutRepository,
+                    historyRepository = historyRepository,
                 )
             }
         }

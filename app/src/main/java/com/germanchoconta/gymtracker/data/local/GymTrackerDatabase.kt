@@ -42,19 +42,40 @@ class ExerciseRepository(
 ) {
     fun observeActive() = exerciseDao.observeActive()
     fun observeMuscles(exerciseId: String) = muscleDao.observeForExercise(exerciseId)
+    fun observeAllMuscles() = muscleDao.observeAll()
     suspend fun getById(id: String) = exerciseDao.getById(id)
+    suspend fun getAssignments(exerciseId: String) = muscleDao.getAssignments(exerciseId)
     suspend fun save(exercise: ExerciseEntity) = exerciseDao.upsert(exercise)
     suspend fun saveMuscle(muscle: MuscleEntity) = muscleDao.upsert(muscle)
     suspend fun linkMuscle(link: ExerciseMuscleEntity) = muscleDao.upsertLink(link)
+
+    suspend fun saveWithMuscles(
+        exercise: ExerciseEntity,
+        muscles: List<MuscleEntity>,
+        links: List<ExerciseMuscleEntity>,
+    ) {
+        muscles.forEach { muscleDao.upsert(it) }
+        exerciseDao.upsert(exercise)
+        muscleDao.replaceLinks(exercise.id, links)
+    }
+
     suspend fun archive(id: String) = exerciseDao.archive(id)
 }
 
 class RoutineRepository(private val routineDao: RoutineDao) {
     fun observeActive() = routineDao.observeActive()
     fun observeExercises(routineId: String) = routineDao.observeExercises(routineId)
+    suspend fun getById(id: String) = routineDao.getById(id)
+    suspend fun getExercises(routineId: String) = routineDao.getExercises(routineId)
     suspend fun save(routine: RoutineEntity) = routineDao.upsert(routine)
     suspend fun saveExercise(routineExercise: RoutineExerciseEntity) =
         routineDao.upsertExercise(routineExercise)
+
+    suspend fun saveWithExercises(
+        routine: RoutineEntity,
+        exercises: List<RoutineExerciseEntity>,
+    ) = routineDao.saveWithExercises(routine, exercises)
+
     suspend fun archive(id: String) = routineDao.archive(id)
 }
 

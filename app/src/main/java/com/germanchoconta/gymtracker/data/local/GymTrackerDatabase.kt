@@ -31,6 +31,7 @@ abstract class GymTrackerDatabase : RoomDatabase() {
     abstract fun routineDao(): RoutineDao
     abstract fun workoutDao(): WorkoutDao
     abstract fun historyDao(): HistoryDao
+    abstract fun backupDao(): BackupDao
 
     companion object {
         const val DATABASE_NAME = "gymtracker.db"

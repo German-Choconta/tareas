@@ -2,7 +2,17 @@ package com.germanchoconta.gymtracker.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -13,8 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.germanchoconta.gymtracker.data.local.ExerciseRepository
+import com.germanchoconta.gymtracker.data.local.HistoryRepository
 import com.germanchoconta.gymtracker.data.local.RoutineRepository
 import com.germanchoconta.gymtracker.data.local.WorkoutRepository
+import com.germanchoconta.gymtracker.ui.history.HistoryScreen
+import com.germanchoconta.gymtracker.ui.history.HistoryViewModel
 import com.germanchoconta.gymtracker.ui.management.ExerciseEditorScreen
 import com.germanchoconta.gymtracker.ui.management.ExerciseLibraryViewModel
 import com.germanchoconta.gymtracker.ui.management.ManagementDestination
@@ -25,11 +38,14 @@ import com.germanchoconta.gymtracker.ui.workout.RoutineLaunchHome
 import com.germanchoconta.gymtracker.ui.workout.WorkoutLoggerScreen
 import com.germanchoconta.gymtracker.ui.workout.WorkoutLoggerViewModel
 
+private enum class AppDestination { EXERCISES, ROUTINES, HISTORY }
+
 @Composable
 fun GymTrackerApp(
     exerciseRepository: ExerciseRepository,
     routineRepository: RoutineRepository,
     workoutRepository: WorkoutRepository,
+    historyRepository: HistoryRepository,
 ) {
     val exerciseViewModel: ExerciseLibraryViewModel = viewModel(
         factory = ExerciseLibraryViewModel.factory(exerciseRepository),
@@ -40,11 +56,15 @@ fun GymTrackerApp(
     val workoutViewModel: WorkoutLoggerViewModel = viewModel(
         factory = WorkoutLoggerViewModel.factory(workoutRepository, exerciseRepository),
     )
+    val historyViewModel: HistoryViewModel = viewModel(
+        factory = HistoryViewModel.factory(historyRepository),
+    )
     val exerciseState by exerciseViewModel.uiState.collectAsStateWithLifecycle()
     val routineState by routineViewModel.uiState.collectAsStateWithLifecycle()
     val workoutState by workoutViewModel.uiState.collectAsStateWithLifecycle()
-    var destinationName by rememberSaveable { mutableStateOf(ManagementDestination.EXERCISES.name) }
-    val destination = ManagementDestination.valueOf(destinationName)
+    val historyState by historyViewModel.uiState.collectAsStateWithLifecycle()
+    var appDestinationName by rememberSaveable { mutableStateOf(AppDestination.EXERCISES.name) }
+    val appDestination = AppDestination.valueOf(appDestinationName)
 
     when {
         workoutState.loading -> Box(
@@ -91,23 +111,67 @@ fun GymTrackerApp(
             onRemoveExercise = routineViewModel::removeRoutineExercise,
             onArchive = routineViewModel::archiveEditor,
         )
-        destination == ManagementDestination.ROUTINES -> RoutineLaunchHome(
-            state = routineState,
-            onDestinationChange = { destinationName = it.name },
-            onCreateRoutine = routineViewModel::startCreate,
-            onEditRoutine = routineViewModel::startEdit,
-            onStartRoutine = workoutViewModel::startRoutine,
-        )
-        else -> ManagementHome(
-            destination = destination,
-            onDestinationChange = { destinationName = it.name },
-            exerciseState = exerciseState,
-            routineState = routineState,
-            onExerciseQueryChange = exerciseViewModel::updateQuery,
-            onCreateExercise = exerciseViewModel::startCreate,
-            onEditExercise = exerciseViewModel::startEdit,
-            onCreateRoutine = routineViewModel::startCreate,
-            onEditRoutine = routineViewModel::startEdit,
-        )
+        else -> Scaffold(
+            bottomBar = {
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = appDestination == AppDestination.EXERCISES,
+                        onClick = { appDestinationName = AppDestination.EXERCISES.name },
+                        icon = { Icon(Icons.Default.FitnessCenter, contentDescription = null) },
+                        label = { Text("Ejercicios") },
+                    )
+                    NavigationBarItem(
+                        selected = appDestination == AppDestination.ROUTINES,
+                        onClick = { appDestinationName = AppDestination.ROUTINES.name },
+                        icon = { Icon(Icons.Default.ListAlt, contentDescription = null) },
+                        label = { Text("Rutinas") },
+                    )
+                    NavigationBarItem(
+                        selected = appDestination == AppDestination.HISTORY,
+                        onClick = { appDestinationName = AppDestination.HISTORY.name },
+                        icon = { Icon(Icons.Default.History, contentDescription = null) },
+                        label = { Text("Historial") },
+                    )
+                }
+            },
+        ) { outerPadding ->
+            Box(modifier = Modifier.fillMaxSize().padding(outerPadding)) {
+                when (appDestination) {
+                    AppDestination.HISTORY -> HistoryScreen(
+                        state = historyState,
+                        viewModel = historyViewModel,
+                        onBackToApp = { appDestinationName = AppDestination.EXERCISES.name },
+                    )
+                    AppDestination.ROUTINES -> RoutineLaunchHome(
+                        state = routineState,
+                        onDestinationChange = { destination ->
+                            appDestinationName = when (destination) {
+                                ManagementDestination.EXERCISES -> AppDestination.EXERCISES.name
+                                ManagementDestination.ROUTINES -> AppDestination.ROUTINES.name
+                            }
+                        },
+                        onCreateRoutine = routineViewModel::startCreate,
+                        onEditRoutine = routineViewModel::startEdit,
+                        onStartRoutine = workoutViewModel::startRoutine,
+                    )
+                    AppDestination.EXERCISES -> ManagementHome(
+                        destination = ManagementDestination.EXERCISES,
+                        onDestinationChange = { destination ->
+                            appDestinationName = when (destination) {
+                                ManagementDestination.EXERCISES -> AppDestination.EXERCISES.name
+                                ManagementDestination.ROUTINES -> AppDestination.ROUTINES.name
+                            }
+                        },
+                        exerciseState = exerciseState,
+                        routineState = routineState,
+                        onExerciseQueryChange = exerciseViewModel::updateQuery,
+                        onCreateExercise = exerciseViewModel::startCreate,
+                        onEditExercise = exerciseViewModel::startEdit,
+                        onCreateRoutine = routineViewModel::startCreate,
+                        onEditRoutine = routineViewModel::startEdit,
+                    )
+                }
+            }
+        }
     }
 }

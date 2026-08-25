@@ -1,7 +1,10 @@
 package com.germanchoconta.gymtracker.ui.history
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
+import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
@@ -59,10 +62,15 @@ data class HistoryUiState(
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class HistoryViewModel(private val repository: HistoryRepository) : ViewModel() {
-    private val selectedId = MutableStateFlow<String?>(null)
+class HistoryViewModel(
+    private val repository: HistoryRepository,
+    private val savedStateHandle: SavedStateHandle,
+) : ViewModel() {
+    private val selectedId = savedStateHandle.getStateFlow<String?>(SELECTED_EXERCISE_KEY, null)
     private val metrics = MutableStateFlow(ExercisePersonalRecords())
-    private val mutableState = MutableStateFlow(HistoryUiState())
+    private val mutableState = MutableStateFlow(
+        HistoryUiState(selectedExerciseId = selectedId.value),
+    )
     val uiState: StateFlow<HistoryUiState> = mutableState.asStateFlow()
 
     val historyItems = combine(selectedId, metrics) { exerciseId, records -> exerciseId to records }
@@ -107,18 +115,43 @@ class HistoryViewModel(private val repository: HistoryRepository) : ViewModel() 
     init {
         viewModelScope.launch {
             repository.observeExercisesWithFinishedHistory().collect { exercises ->
+                val selectedExerciseId = selectedId.value
                 mutableState.update { state ->
                     state.copy(
                         exercises = exercises,
-                        selectedExercise = exercises.firstOrNull { it.id == state.selectedExerciseId },
+                        selectedExerciseId = selectedExerciseId,
+                        selectedExercise = exercises.firstOrNull { it.id == selectedExerciseId },
                     )
                 }
             }
         }
+        selectedId.value?.let(::restoreSelection)
     }
 
     fun selectExercise(exerciseId: String) {
-        selectedId.value = exerciseId
+        savedStateHandle[SELECTED_EXERCISE_KEY] = exerciseId
+        prepareSelection(exerciseId)
+        loadMetrics(exerciseId)
+    }
+
+    fun closeExercise() {
+        savedStateHandle[SELECTED_EXERCISE_KEY] = null
+        metrics.value = ExercisePersonalRecords()
+        mutableState.value = mutableState.value.copy(
+            selectedExerciseId = null,
+            selectedExercise = null,
+            records = ExercisePersonalRecords(),
+            comparison = null,
+            loadingMetrics = false,
+        )
+    }
+
+    private fun restoreSelection(exerciseId: String) {
+        prepareSelection(exerciseId)
+        loadMetrics(exerciseId)
+    }
+
+    private fun prepareSelection(exerciseId: String) {
         metrics.value = ExercisePersonalRecords()
         mutableState.update { state ->
             state.copy(
@@ -129,6 +162,9 @@ class HistoryViewModel(private val repository: HistoryRepository) : ViewModel() 
                 comparison = null,
             )
         }
+    }
+
+    private fun loadMetrics(exerciseId: String) {
         viewModelScope.launch {
             val facts = repository.prFacts(exerciseId)
             val calculated = PersonalRecordEngine.calculate(facts)
@@ -144,23 +180,18 @@ class HistoryViewModel(private val repository: HistoryRepository) : ViewModel() 
         }
     }
 
-    fun closeExercise() {
-        selectedId.value = null
-        metrics.value = ExercisePersonalRecords()
-        mutableState.value = mutableState.value.copy(
-            selectedExerciseId = null,
-            selectedExercise = null,
-            records = ExercisePersonalRecords(),
-            comparison = null,
-            loadingMetrics = false,
-        )
-    }
-
     companion object {
+        internal const val SELECTED_EXERCISE_KEY = "history_selected_exercise_id"
+
         fun factory(repository: HistoryRepository): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
-                override fun <T : ViewModel> create(modelClass: Class<T>): T = HistoryViewModel(repository) as T
+                override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+                    require(modelClass.isAssignableFrom(HistoryViewModel::class.java)) {
+                        "Unsupported ViewModel class: ${modelClass.name}"
+                    }
+                    return HistoryViewModel(repository, extras.createSavedStateHandle()) as T
+                }
             }
     }
 }

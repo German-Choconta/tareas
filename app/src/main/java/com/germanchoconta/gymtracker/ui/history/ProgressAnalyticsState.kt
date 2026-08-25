@@ -12,6 +12,8 @@ import java.math.BigInteger
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlin.math.floor
+import kotlin.math.roundToLong
 
 enum class HistoryDetailSection {
     HISTORY,
@@ -56,6 +58,48 @@ data class ProgressUiState(
     val chart: ProgressChartState = emptyProgressChart(ProgressMetric.LOAD),
     val selectedPointIndex: Int? = null,
 )
+
+data class ProgressTemporalAxis(
+    val xValues: List<Double>,
+    val originDayPosition: Double? = null,
+    val daysPerXUnit: Double = 1.0,
+) {
+    fun dateAt(x: Double): LocalDate? = originDayPosition?.let { origin ->
+        LocalDate.ofEpochDay(floor(origin + x * daysPerXUnit).toLong())
+    }
+}
+
+internal fun buildProgressTemporalAxis(points: List<ProgressChartPoint>): ProgressTemporalAxis {
+    if (points.isEmpty()) return ProgressTemporalAxis(emptyList())
+    val dates = points.map { it.localDate ?: return ProgressTemporalAxis(points.indices.map(Int::toDouble)) }
+    val counts = dates.groupingBy { it }.eachCount()
+    val ranks = mutableMapOf<LocalDate, Int>()
+    val dayPositions = dates.map { date ->
+        val rank = ranks.getOrDefault(date, 0)
+        ranks[date] = rank + 1
+        val count = counts.getValue(date)
+        date.toEpochDay().toDouble() + (rank + 1).toDouble() / (count + 1).toDouble()
+    }
+    val origin = dayPositions.minOrNull() ?: return ProgressTemporalAxis(emptyList())
+    val maximum = dayPositions.maxOrNull() ?: origin
+    val temporalSpanDays = maximum - origin
+    val targetSpan = (points.size - 1).coerceAtLeast(1).toDouble()
+    val daysPerXUnit = if (temporalSpanDays > 0.0) temporalSpanDays / targetSpan else 1.0
+
+    var previousUnits: Long? = null
+    val xValues = dayPositions.map { dayPosition ->
+        val normalized = if (temporalSpanDays > 0.0) (dayPosition - origin) / daysPerXUnit else 0.0
+        val roundedUnits = (normalized * VICO_X_PRECISION_SCALE).roundToLong()
+        val units = previousUnits?.let { previous -> maxOf(roundedUnits, previous + 1L) } ?: roundedUnits
+        previousUnits = units
+        units.toDouble() / VICO_X_PRECISION_SCALE
+    }
+    return ProgressTemporalAxis(
+        xValues = xValues,
+        originDayPosition = origin,
+        daysPerXUnit = daysPerXUnit,
+    )
+}
 
 internal fun ProgressUiState.activeDateRange(): AnalyticsDateRange? = when (rangeMode) {
     ProgressRangeMode.ALL_TIME -> AnalyticsDateRange.AllTime
@@ -184,3 +228,5 @@ internal fun formatExactKilograms(grams: Long): String {
     val sign = if (negative) "-" else ""
     return if (fraction.isEmpty()) "$sign${parts[0]}" else "$sign${parts[0]}.$fraction"
 }
+
+private const val VICO_X_PRECISION_SCALE = 10_000.0

@@ -67,7 +67,8 @@ class ProgressAnalyticsEngineTest {
         assertEquals(listOf("two-rep", "ten-rep"), trend.map { it.workoutId })
         assertEquals(BigInteger.valueOf(100_000L * 32L), trend[0].exactValue)
         assertEquals(BigInteger.valueOf(80_000L * 40L), trend[1].exactValue)
-        assertEquals(30, trend.single().denominator.takeIf { trend.size == 1 } ?: trend[0].denominator)
+        assertEquals(30, trend[0].denominator)
+        assertEquals(30, trend[1].denominator)
 
         val sameWithoutRir = PersonalRecordEngine.estimatedOneRepMax(facts[1].copy(rirTenths = null))
         assertEquals(analytics.sessions.first { it.workoutId == "two-rep" }.estimatedOneRepMax, sameWithoutRir)
@@ -222,7 +223,7 @@ class ProgressAnalyticsEngineTest {
                 reps = 8,
             )
         }
-        val analytics = ProgressAnalyticsEngine.calculate(dense.shuffled(java.util.Random(7)), zoneId = utc)
+        val analytics = ProgressAnalyticsEngine.calculate(dense.shuffled(kotlin.random.Random(7)), zoneId = utc)
         val trend = ProgressAnalyticsEngine.loadTrend(analytics)
         val sampled = AnalyticsPresentationSampler.sample(trend, targetPoints = 120)
         val sampledAgain = AnalyticsPresentationSampler.sample(trend, targetPoints = 120)

@@ -4,9 +4,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.assertTextContains
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -69,7 +69,7 @@ class HistoryProgressUiTest {
             }
         }
 
-        composeRule.onNodeWithText("Sin datos para esta vista").assertTextContains("Sin datos")
+        composeRule.onNodeWithText("Sin datos para esta vista").assertExists()
         composeRule.onNodeWithText("Volumen").performClick()
         composeRule.runOnIdle {
             assertEquals(ProgressMetric.VOLUME, state.metric)

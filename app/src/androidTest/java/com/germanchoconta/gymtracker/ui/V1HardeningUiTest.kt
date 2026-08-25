@@ -128,6 +128,7 @@ class V1HardeningUiTest {
     fun exercisePickerSurvivesSavedInstanceStateRestoration() {
         val restorationTester = StateRestorationTester(composeRule)
         val state = syntheticWorkoutState().copy(
+            exercises = emptyList(),
             exerciseChoices = listOf(
                 WorkoutExerciseChoice(
                     id = "synthetic-choice",

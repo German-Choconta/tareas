@@ -302,9 +302,12 @@ class WorkoutLoggerViewModel(
     fun finishConfirmed() {
         val workoutId = _uiState.value.activeWorkoutId ?: return
         viewModelScope.launch {
+            // Flush the latest debounced notes while the workout is still editable.
+            // Otherwise a fast "type note → Finish" sequence could race finishedAt
+            // and the guarded DAO update would correctly refuse the late note write.
+            workoutNotesJob?.join()
+            exerciseNotesJobs.values.toList().forEach { it.join() }
             if (workoutRepository.finishWorkout(workoutId, now())) {
-                workoutNotesJob?.join()
-                exerciseNotesJobs.values.forEach { it.join() }
                 val choices = loadExerciseChoices(emptySet())
                 _uiState.value = WorkoutLoggerUiState(loading = false, exerciseChoices = choices)
             }

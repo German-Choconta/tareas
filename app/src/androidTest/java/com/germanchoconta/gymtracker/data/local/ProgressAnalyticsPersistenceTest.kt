@@ -2,7 +2,9 @@ package com.germanchoconta.gymtracker.data.local
 
 import android.content.Context
 import androidx.room3.Room
+import androidx.room3.executeSQL
 import androidx.room3.useReaderConnection
+import androidx.room3.useWriterConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -87,7 +89,7 @@ class ProgressAnalyticsPersistenceTest {
         )
 
         db.exerciseDao().archive(exercise.id)
-        db.routineDao().delete(routine.id)
+        db.useWriterConnection { it.executeSQL("DELETE FROM routine WHERE id = '${routine.id}'") }
 
         assertNull(db.workoutDao().getWorkout(workout.id)?.routineId)
         val rows = historyDao.getExercisePrFactsInRange(exercise.id, 9_000L, 12_000L)

@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.germanchoconta.gymtracker.domain.FrequencyBucketSize
 import com.germanchoconta.gymtracker.domain.ProgressMetric
@@ -69,7 +70,7 @@ class HistoryProgressUiTest {
         }
 
         composeRule.onNodeWithText("Sin datos para esta vista").assertTextEquals("Sin datos para esta vista")
-        composeRule.onNodeWithText("Volumen").performClick()
+        composeRule.onNodeWithText("Volumen").performScrollTo().performClick()
         composeRule.onNodeWithText("Volumen").assertIsSelected()
         composeRule.onNodeWithText("Sin datos para esta vista").assertTextEquals("Sin datos para esta vista")
     }

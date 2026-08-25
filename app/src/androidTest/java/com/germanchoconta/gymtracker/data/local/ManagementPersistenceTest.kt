@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -83,7 +82,7 @@ class ManagementPersistenceTest {
     }
 
     @Test
-    fun routineCreateEditReorderAndRemovePersistsOrderedTargets() = runTest {
+    fun routineCreateEditReorderRemoveAndArchivePersistsOrderedTargets() = runTest {
         val routineRepository = RoutineRepository(db.routineDao())
         db.exerciseDao().upsert(ExerciseEntity("bench", "Bench Press"))
         db.exerciseDao().upsert(ExerciseEntity("row", "Cable Row"))
@@ -115,6 +114,10 @@ class ManagementPersistenceTest {
         assertEquals(1_250L, saved[1].loadIncrementGrams)
         assertEquals(PreviousReferenceModes.SAME_ROUTINE, saved[1].previousReferenceMode)
         assertEquals("Upper A", routineRepository.getById("upper")?.name)
+
+        routineRepository.archive("upper")
+        assertTrue(routineRepository.observeActive().first().isEmpty())
+        assertTrue(requireNotNull(routineRepository.getById("upper")).archived)
     }
 
     @Test
@@ -143,6 +146,7 @@ class ManagementPersistenceTest {
                 id = "set",
                 workoutExerciseId = "workout-bench",
                 position = 0,
+                type = SetTypes.WORK,
                 loadGrams = 42_500,
                 reps = 10,
                 rirTenths = 15,

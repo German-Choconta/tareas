@@ -17,6 +17,7 @@ import com.germanchoconta.gymtracker.domain.PreviousSessionComparison
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
@@ -58,17 +59,17 @@ class HistoryViewModel(private val repository: HistoryRepository) : ViewModel() 
     private val mutableState = MutableStateFlow(HistoryUiState())
     val uiState: StateFlow<HistoryUiState> = mutableState.asStateFlow()
 
-    val historyItems = selectedId
-        .flatMapLatest { exerciseId ->
+    val historyItems = combine(selectedId, metrics) { exerciseId, records -> exerciseId to records }
+        .flatMapLatest { (exerciseId, records) ->
             if (exerciseId == null) {
                 flowOf(PagingData.empty())
             } else {
+                val kindsBySet = PersonalRecordEngine.eventKindsBySet(records)
+                val volumePrWorkouts = PersonalRecordEngine.volumePrWorkoutIds(records)
                 repository.exerciseHistory(exerciseId).flatMapLatest { rows ->
-                    val kindsBySet = PersonalRecordEngine.eventKindsBySet(metrics.value)
-                    val volumePrWorkouts = PersonalRecordEngine.volumePrWorkoutIds(metrics.value)
                     flowOf(
                         rows.map { row ->
-                            HistoryListItem.SetItem(row, kindsBySet[row.workoutSetId].orEmpty())
+                            HistoryListItem.SetItem(row, kindsBySet[row.workoutSetId].orEmpty()) as HistoryListItem
                         }.insertSeparators { before, after ->
                             val afterSet = after as? HistoryListItem.SetItem ?: return@insertSeparators null
                             val beforeSet = before as? HistoryListItem.SetItem
@@ -103,6 +104,7 @@ class HistoryViewModel(private val repository: HistoryRepository) : ViewModel() 
 
     fun selectExercise(exerciseId: String) {
         selectedId.value = exerciseId
+        metrics.value = ExercisePersonalRecords()
         mutableState.update { state ->
             state.copy(
                 selectedExerciseId = exerciseId,
@@ -115,6 +117,7 @@ class HistoryViewModel(private val repository: HistoryRepository) : ViewModel() 
         viewModelScope.launch {
             val facts = repository.prFacts(exerciseId)
             val calculated = PersonalRecordEngine.calculate(facts)
+            if (selectedId.value != exerciseId) return@launch
             metrics.value = calculated
             mutableState.update { state ->
                 if (state.selectedExerciseId != exerciseId) state else state.copy(

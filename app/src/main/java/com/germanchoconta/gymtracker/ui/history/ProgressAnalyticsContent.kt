@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -218,11 +220,11 @@ private fun ExactLoadSelector(
         if (loads.isEmpty()) {
             Text("No hay cargas elegibles en este rango.", style = MaterialTheme.typography.bodyMedium)
         } else {
-            Row(
-                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                loads.forEach { load ->
+                items(items = loads, key = { it }) { load ->
                     FilterChip(
                         selected = selectedLoad == load,
                         onClick = { onSelected(load) },

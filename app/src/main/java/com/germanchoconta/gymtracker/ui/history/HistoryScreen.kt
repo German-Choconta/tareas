@@ -32,10 +32,9 @@ import com.germanchoconta.gymtracker.data.local.HistoryExerciseRow
 fun HistoryScreen(
     state: HistoryUiState,
     viewModel: HistoryViewModel,
-    onBackToApp: () -> Unit,
 ) {
     if (state.selectedExerciseId == null) {
-        HistoryLibrary(state.exercises, viewModel::selectExercise, onBackToApp)
+        HistoryLibrary(state.exercises, viewModel::selectExercise)
     } else {
         HistoryDetail(state, viewModel, viewModel::closeExercise)
     }
@@ -46,18 +45,10 @@ fun HistoryScreen(
 private fun HistoryLibrary(
     exercises: List<HistoryExerciseRow>,
     onExerciseClick: (String) -> Unit,
-    onBack: () -> Unit,
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Historial") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
-                    }
-                },
-            )
+            TopAppBar(title = { Text("Historial") })
         },
     ) { padding ->
         if (exercises.isEmpty()) {

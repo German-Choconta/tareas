@@ -202,7 +202,10 @@ fun GymTrackerApp(
                         AppDestination.HISTORY -> HistoryScreen(
                             state = historyState,
                             viewModel = historyViewModel,
-                            onRecoveryContext = { recoveryContextOpen = true },
+                            onRecoveryContext = {
+                                recoveryViewModel.refresh()
+                                recoveryContextOpen = true
+                            },
                             onManageData = { dataManagementOpen = true },
                         )
                     }

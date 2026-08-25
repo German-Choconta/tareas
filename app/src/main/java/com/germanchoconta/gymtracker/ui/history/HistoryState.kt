@@ -13,7 +13,9 @@ import com.germanchoconta.gymtracker.data.local.HistorySetRow
 import com.germanchoconta.gymtracker.domain.ExercisePersonalRecords
 import com.germanchoconta.gymtracker.domain.PersonalRecordEngine
 import com.germanchoconta.gymtracker.domain.PersonalRecordKind
+import com.germanchoconta.gymtracker.domain.PrSetFact
 import com.germanchoconta.gymtracker.domain.PreviousSessionComparison
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +34,7 @@ sealed interface HistoryListItem {
         val startedAt: Long,
         val workoutNotes: String?,
         val isVolumePrEvent: Boolean,
+        val isCurrentVolumeBest: Boolean,
     ) : HistoryListItem {
         override val stableKey = "session-$workoutId"
     }
@@ -39,6 +42,8 @@ sealed interface HistoryListItem {
     data class SetItem(
         val row: HistorySetRow,
         val prKinds: Set<PersonalRecordKind>,
+        val currentBestKinds: Set<PersonalRecordKind>,
+        val estimatedOneRepMaxGrams: Long?,
     ) : HistoryListItem {
         override val stableKey = "set-${row.workoutSetId}"
     }
@@ -53,6 +58,7 @@ data class HistoryUiState(
     val loadingMetrics: Boolean = false,
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModel(private val repository: HistoryRepository) : ViewModel() {
     private val selectedId = MutableStateFlow<String?>(null)
     private val metrics = MutableStateFlow(ExercisePersonalRecords())
@@ -69,7 +75,15 @@ class HistoryViewModel(private val repository: HistoryRepository) : ViewModel() 
                 repository.exerciseHistory(exerciseId).flatMapLatest { rows ->
                     flowOf(
                         rows.map { row ->
-                            HistoryListItem.SetItem(row, kindsBySet[row.workoutSetId].orEmpty()) as HistoryListItem
+                            val fact = row.toPrSetFact()
+                            HistoryListItem.SetItem(
+                                row = row,
+                                prKinds = kindsBySet[row.workoutSetId].orEmpty(),
+                                currentBestKinds = currentBestKinds(records, row),
+                                estimatedOneRepMaxGrams = PersonalRecordEngine
+                                    .estimatedOneRepMax(fact)
+                                    ?.roundedGrams,
+                            ) as HistoryListItem
                         }.insertSeparators { before, after ->
                             val afterSet = after as? HistoryListItem.SetItem ?: return@insertSeparators null
                             val beforeSet = before as? HistoryListItem.SetItem
@@ -80,6 +94,7 @@ class HistoryViewModel(private val repository: HistoryRepository) : ViewModel() 
                                     startedAt = afterSet.row.startedAt,
                                     workoutNotes = afterSet.row.workoutNotes,
                                     isVolumePrEvent = afterSet.row.workoutId in volumePrWorkouts,
+                                    isCurrentVolumeBest = records.highestSessionVolume?.workoutId == afterSet.row.workoutId,
                                 )
                             } else null
                         },
@@ -147,5 +162,35 @@ class HistoryViewModel(private val repository: HistoryRepository) : ViewModel() 
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T = HistoryViewModel(repository) as T
             }
+    }
+}
+
+private fun HistorySetRow.toPrSetFact() = PrSetFact(
+    workoutId = workoutId,
+    workoutExerciseId = workoutExerciseId,
+    workoutSetId = workoutSetId,
+    startedAt = startedAt,
+    finishedAt = finishedAt,
+    workoutExercisePosition = workoutExercisePosition,
+    setPosition = setPosition,
+    type = type,
+    loadGrams = loadGrams,
+    reps = reps,
+    rirTenths = rirTenths,
+    completedAt = completedAt,
+)
+
+private fun currentBestKinds(
+    records: ExercisePersonalRecords,
+    row: HistorySetRow,
+): Set<PersonalRecordKind> = buildSet {
+    if (records.heaviestLoad?.fact?.workoutSetId == row.workoutSetId) {
+        add(PersonalRecordKind.HEAVIEST_LOAD)
+    }
+    if (records.repsAtExactLoad[row.loadGrams]?.fact?.workoutSetId == row.workoutSetId) {
+        add(PersonalRecordKind.REPS_AT_LOAD)
+    }
+    if (records.estimatedOneRepMax?.fact?.workoutSetId == row.workoutSetId) {
+        add(PersonalRecordKind.ESTIMATED_ONE_REP_MAX)
     }
 }

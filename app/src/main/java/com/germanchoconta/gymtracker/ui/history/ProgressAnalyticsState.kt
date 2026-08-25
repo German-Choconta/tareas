@@ -9,6 +9,7 @@ import com.germanchoconta.gymtracker.domain.FrequencyBucketSize
 import com.germanchoconta.gymtracker.domain.ProgressAnalyticsEngine
 import com.germanchoconta.gymtracker.domain.ProgressMetric
 import java.math.BigInteger
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -25,6 +26,7 @@ enum class ProgressRangeMode {
 data class ProgressChartPoint(
     val stableId: String,
     val startedAt: Long? = null,
+    val localDate: LocalDate? = null,
     val bucketStart: LocalDate? = null,
     val exactValue: BigInteger,
     val denominator: Int = 1,
@@ -77,6 +79,7 @@ internal fun buildProgressChartState(
         points = ProgressAnalyticsEngine.loadTrend(analytics),
         unitLabel = "kg",
         explanation = "Máxima carga exacta de un set elegible en cada workout terminado.",
+        zoneId = zoneId,
     )
     ProgressMetric.REPS_AT_EXACT_LOAD -> {
         val load = selectedExactLoadGrams
@@ -89,6 +92,7 @@ internal fun buildProgressChartState(
             } else {
                 "Máximas reps por workout hechas a exactamente ${formatExactKilograms(load)} kg. Las sesiones con otra carga no se convierten en cero."
             },
+            zoneId = zoneId,
         )
     }
     ProgressMetric.ESTIMATED_ONE_REP_MAX -> trendChart(
@@ -96,12 +100,14 @@ internal fun buildProgressChartState(
         points = ProgressAnalyticsEngine.estimatedOneRepMaxTrend(analytics),
         unitLabel = "kg estimados",
         explanation = "Estimated 1RM / e1RM por workout con Epley y sets elegibles de 2–10 reps. RIR no forma parte de la fórmula.",
+        zoneId = zoneId,
     )
     ProgressMetric.VOLUME -> trendChart(
         metric = metric,
         points = ProgressAnalyticsEngine.volumeTrend(analytics),
         unitLabel = "kg·reps",
         explanation = "Volumen descriptivo del ejercicio por workout: suma de carga × reps de sets elegibles. No es un score de calidad.",
+        zoneId = zoneId,
     )
     ProgressMetric.FREQUENCY -> {
         val frequency = ProgressAnalyticsEngine.frequency(analytics, bucketSize, range, zoneId)
@@ -110,6 +116,7 @@ internal fun buildProgressChartState(
             points = frequency.map { point ->
                 ProgressChartPoint(
                     stableId = "frequency-${bucketSize.name}-${point.bucketStart}",
+                    localDate = point.bucketStart,
                     bucketStart = point.bucketStart,
                     exactValue = BigInteger.valueOf(point.sessionCount.toLong()),
                 )
@@ -129,6 +136,7 @@ private fun trendChart(
     points: List<AnalyticsPoint>,
     unitLabel: String,
     explanation: String,
+    zoneId: ZoneId,
 ): ProgressChartState {
     val sampled = AnalyticsPresentationSampler.sample(points)
     return ProgressChartState(
@@ -137,6 +145,7 @@ private fun trendChart(
             ProgressChartPoint(
                 stableId = "${metric.name}-${point.workoutId}",
                 startedAt = point.startedAt,
+                localDate = Instant.ofEpochMilli(point.startedAt).atZone(zoneId).toLocalDate(),
                 exactValue = point.exactValue,
                 denominator = point.denominator,
                 isRecordWitness = point.isRecordWitness,

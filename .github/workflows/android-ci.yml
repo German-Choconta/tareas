@@ -27,7 +27,14 @@ jobs:
       - name: Unit tests
         run: gradle testDebugUnitTest --stacktrace
       - name: Verify Room schema is committed
-        run: git diff --exit-code -- app/schemas
+        run: |
+          schema_status="$(git status --porcelain --untracked-files=all -- app/schemas)"
+          if [ -n "$schema_status" ]; then
+            echo "Room schema output is not fully committed:"
+            echo "$schema_status"
+            git diff -- app/schemas
+            exit 1
+          fi
       - name: Upload generated Room schema
         uses: actions/upload-artifact@v4
         with:

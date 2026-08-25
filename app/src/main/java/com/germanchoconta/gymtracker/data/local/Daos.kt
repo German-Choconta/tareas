@@ -14,6 +14,9 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercise WHERE archived = 0 ORDER BY name COLLATE NOCASE")
     fun observeActive(): Flow<List<ExerciseEntity>>
 
+    @Query("SELECT * FROM exercise WHERE archived = 0 ORDER BY name COLLATE NOCASE")
+    suspend fun getActive(): List<ExerciseEntity>
+
     @Query("SELECT * FROM exercise WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): ExerciseEntity?
 
@@ -104,10 +107,6 @@ interface RoutineDao {
     /**
      * Replaces a routine template atomically without violating the unique
      * (routineId, position) index while items are reordered.
-     *
-     * Existing rows are first moved to unique negative temporary positions,
-     * then removed/upserted into their final non-negative order. Historical
-     * WorkoutExercise rows remain safe because their routineExerciseId FK is SET_NULL.
      */
     @Transaction
     suspend fun saveWithExercises(
@@ -162,11 +161,95 @@ interface WorkoutDao {
     @Query("SELECT * FROM workout WHERE id = :id LIMIT 1")
     suspend fun getWorkout(id: String): WorkoutEntity?
 
+    @Query("SELECT * FROM workout WHERE finishedAt IS NULL ORDER BY startedAt DESC LIMIT 1")
+    suspend fun getActiveWorkout(): WorkoutEntity?
+
+    @Query("SELECT * FROM workout_exercise WHERE id = :id LIMIT 1")
+    suspend fun getWorkoutExercise(id: String): WorkoutExerciseEntity?
+
     @Query("SELECT * FROM workout_exercise WHERE workoutId = :workoutId ORDER BY position")
     suspend fun getExercises(workoutId: String): List<WorkoutExerciseEntity>
 
+    @Query("SELECT * FROM workout_set WHERE id = :id LIMIT 1")
+    suspend fun getSet(id: String): WorkoutSetEntity?
+
     @Query("SELECT * FROM workout_set WHERE workoutExerciseId = :workoutExerciseId ORDER BY position")
     suspend fun getSets(workoutExerciseId: String): List<WorkoutSetEntity>
+
+    @Query(
+        "SELECT * FROM workout_set WHERE workoutExerciseId = :workoutExerciseId " +
+            "AND completedAt IS NOT NULL ORDER BY position",
+    )
+    suspend fun getCompletedSets(workoutExerciseId: String): List<WorkoutSetEntity>
+
+    @Transaction
+    suspend fun insertWorkoutAggregate(
+        workout: WorkoutEntity,
+        exercises: List<WorkoutExerciseEntity>,
+        sets: List<WorkoutSetEntity>,
+    ) {
+        upsert(workout)
+        exercises.forEach { upsertExercise(it) }
+        sets.forEach { upsertSet(it) }
+    }
+
+    @Query("UPDATE workout SET notes = :notes WHERE id = :workoutId AND finishedAt IS NULL")
+    suspend fun updateWorkoutNotes(workoutId: String, notes: String?)
+
+    @Query("UPDATE workout_exercise SET notes = :notes WHERE id = :workoutExerciseId")
+    suspend fun updateWorkoutExerciseNotes(workoutExerciseId: String, notes: String?)
+
+    @Query(
+        "UPDATE workout SET restTimerEndsAt = :endsAt, restTimerWorkoutExerciseId = :workoutExerciseId " +
+            "WHERE id = :workoutId AND finishedAt IS NULL",
+    )
+    suspend fun setRestTimer(workoutId: String, workoutExerciseId: String?, endsAt: Long?)
+
+    @Query(
+        "UPDATE workout SET finishedAt = :finishedAt, restTimerEndsAt = NULL, " +
+            "restTimerWorkoutExerciseId = NULL WHERE id = :workoutId AND finishedAt IS NULL",
+    )
+    suspend fun finishWorkout(workoutId: String, finishedAt: Long)
+
+    @Query("DELETE FROM workout_set WHERE id = :setId")
+    suspend fun deleteSet(setId: String)
+
+    @Query("UPDATE workout_set SET position = :position WHERE id = :setId")
+    suspend fun updateSetPosition(setId: String, position: Int)
+
+    @Transaction
+    suspend fun deleteSetAndCompact(workoutExerciseId: String, setId: String) {
+        val set = getSet(setId) ?: return
+        if (set.workoutExerciseId != workoutExerciseId) return
+        deleteSet(setId)
+        val remaining = getSets(workoutExerciseId)
+        remaining.forEachIndexed { index, item ->
+            updateSetPosition(item.id, -(index + 1))
+        }
+        remaining.forEachIndexed { index, item ->
+            updateSetPosition(item.id, index)
+        }
+    }
+
+    @Query("DELETE FROM workout_exercise WHERE id = :workoutExerciseId")
+    suspend fun deleteWorkoutExercise(workoutExerciseId: String)
+
+    @Query("UPDATE workout_exercise SET position = :position WHERE id = :workoutExerciseId")
+    suspend fun updateWorkoutExercisePosition(workoutExerciseId: String, position: Int)
+
+    @Transaction
+    suspend fun deleteWorkoutExerciseAndCompact(workoutId: String, workoutExerciseId: String) {
+        val item = getWorkoutExercise(workoutExerciseId) ?: return
+        if (item.workoutId != workoutId) return
+        deleteWorkoutExercise(workoutExerciseId)
+        val remaining = getExercises(workoutId)
+        remaining.forEachIndexed { index, exercise ->
+            updateWorkoutExercisePosition(exercise.id, -(index + 1))
+        }
+        remaining.forEachIndexed { index, exercise ->
+            updateWorkoutExercisePosition(exercise.id, index)
+        }
+    }
 
     @Query(
         """

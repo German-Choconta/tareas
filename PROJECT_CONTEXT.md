@@ -41,13 +41,14 @@
 - Branch: `feat/workout-logger`.
 - PR: `#13 — GymTracker PR 4: Workout logger`.
 - PR remains **draft until the final documentation head itself is green**.
-- Implementation head before this final context update: `6fc9b404e2027e970c78debc19206c83cb7cbde4`.
-- Full Android CI on that implementation head: `32807953830` — **SUCCESS**.
+- Last fully verified implementation head before final UX/doc closure: `6fc9b404e2027e970c78debc19206c83cb7cbde4`.
+- Full Android CI on that head: `32807953830` — **SUCCESS**.
 - Every step passed: schema snapshot, JVM tests, committed Room schema semantic verification, schema artifact, KVM, instrumented Room/migration tests, lint, debug APK assembly, and APK artifact.
 - Artifacts from `32807953830`:
   - `gymtracker-debug-apk` — artifact `9548878511`.
   - `gymtracker-room-schema` — artifact `9548809161`.
-- PR #13 was verified mergeable before this context update and had no review submissions or unresolved review threads.
+- A final UX review after that green run corrected Finish confirmation behavior so untouched planned sets do not trigger an unnecessary dialog while any actually typed incomplete draft remains protected. The code/test head immediately before this context update is `b83bda36682747372e122f5685096188fc03cf3f`.
+- PR #13 was verified mergeable before the final context cycle and had no review submissions or unresolved review threads.
 - **Important self-reference rule:** this `PROJECT_CONTEXT.md` update creates a newer branch head. Do not merge PR4 until CI for the newer head that includes this file is SUCCESS and its artifacts are verified.
 
 ## 2. Android/toolchain baseline
@@ -228,7 +229,8 @@ Per-field autosave is serialized/cancelable so rapid typing on the same field ca
 ### Finish
 
 - Finish sets `finishedAt` and clears rest timer recovery state.
-- A confirmation is shown when incomplete sets remain.
+- Untouched planned sets do **not** trigger an unnecessary confirmation dialog.
+- If any incomplete set contains typed load/reps/RIR input or a non-default set type, Finish asks for confirmation before leaving that draft incomplete. Invalid-but-typed text is also treated as meaningful draft input so it cannot disappear silently.
 - Incomplete/empty sets are not silently converted to completed history.
 - Once finished, repository mutations that require an active workout are rejected.
 
@@ -278,6 +280,8 @@ Includes:
 - exact/invalid RIR validation,
 - timer remaining-time math,
 - meaningful incomplete-data detection,
+- untouched planned sets do not count as destructive draft loss,
+- any typed incomplete draft—including invalid text—is protected before Finish,
 - UI state helper behavior used by the logger.
 
 ### Instrumented Room/repository coverage
@@ -322,6 +326,8 @@ Includes:
    - Start is guarded/transactional around active-workout detection.
 7. **Rapid add-set/add-exercise taps could contend for the same unique position.**
    - Append position calculation + insert are transactional and have concurrency coverage.
+8. **Finish confirmation initially triggered for every untouched planned set and could miss invalid-but-typed draft text.**
+   - Finish now confirms only when an incomplete set actually contains user-entered draft data or a changed set type; any nonblank typed value counts, even if validation fails.
 
 ## 9. CI contract after PR4
 

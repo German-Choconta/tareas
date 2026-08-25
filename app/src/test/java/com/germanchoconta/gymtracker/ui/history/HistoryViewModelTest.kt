@@ -9,6 +9,7 @@ import com.germanchoconta.gymtracker.data.local.HistoryRepository
 import com.germanchoconta.gymtracker.data.local.HistorySetRow
 import com.germanchoconta.gymtracker.data.local.PrFactRow
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -23,6 +24,7 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModelTest {
     private val dispatcher = StandardTestDispatcher()
 

@@ -11,17 +11,18 @@
 - Never commit real workout data, health data, credentials, tokens, secrets, private exports, or personally identifying training fixtures. Source, docs, tests, and synthetic fixtures only.
 - Product loop: **LOG → COMPARE → UNDERSTAND → PROGRESS**.
 - Future active-workout UX north star: **PREVIOUS + TARGET + TODAY**.
-- PR #1 — Android foundation: **merged to `main`**.
-- Current PR at this update: **#11 — GymTracker PR 2: Room local data foundation**.
-- Branch: `feat/room-data-foundation` → `main`.
-- Issue: **#2**.
-- PR #11 implementation head verified before this documentation commit: `2667f81d305b2583887d219aedf6ff7a8f4bd22d`.
-- Android CI run `32780613138` completed **SUCCESS** on 2026-08-24. Every job step passed, including unit tests, committed-schema verification, schema artifact upload, KVM setup, Room instrumented database tests, lint, debug APK assembly, and APK upload.
-- Verified artifacts from run `32780613138`:
-  - `gymtracker-debug-apk` — 19,038,808 bytes — artifact id `9539789708`.
-  - `gymtracker-room-schema` — 1,867 bytes — artifact id `9539643452`.
-- After this file is updated, CI must be re-verified on the new documentation head before PR #11 is marked ready or merged.
-- User explicitly authorized autonomous GitHub work and merge for this GymTracker flow once acceptance criteria are met.
+- PR #1 — Android foundation: **MERGED**.
+- PR #11 / Issue #2 — Room local data foundation: **MERGED / COMPLETED**.
+- PR #11 was squash-merged to `main` as `aceaadbcb4a3ea370439556780b3b674e0505350` on 2026-08-24 America/Bogota.
+- Final PR2 head: `d763aecaa2c47c4e08a0028ff9ed4fc4b25150d3`.
+- Final PR2 Android CI: run `32801537677` — **SUCCESS**.
+- Every final PR2 CI step passed: unit tests, committed Room schema verification, schema artifact upload, KVM, Room instrumented DB/MigrationTestHelper tests, lint, debug APK assembly, and APK upload.
+- Final PR2 artifacts from run `32801537677`:
+  - `gymtracker-debug-apk` — 19,038,803 bytes — artifact id `9546781258`.
+  - `gymtracker-room-schema` — 1,867 bytes — artifact id `9546684624`.
+- Issue #2 state: closed with reason `completed`.
+- Current product stage: **Issue #3 / PR3 — Exercises and Routine Editor**. Before implementation, research current official Android/Material 3 UX guidance.
+- User explicitly authorized autonomous GitHub work and merge for GymTracker stages once acceptance criteria are met.
 
 ## 1. Product mission
 
@@ -64,7 +65,7 @@ Architecture rules:
 - Room repositories/DAOs remain the persistence boundary.
 - `SavedStateHandle` / saveable state is for small navigation/recovery state, not canonical workout history.
 
-## 3. PR #2 — Room local data foundation: final architecture
+## 3. Room data foundation — merged architecture
 
 ### Dependencies
 
@@ -74,7 +75,7 @@ Architecture rules:
 - KSP: `2.3.10`.
 - SQLite bundled driver: `androidx.sqlite:sqlite-bundled:2.7.0`.
 - Coroutines Android/test: `1.11.0`.
-- `kotlinx-serialization-core/json`: `1.8.1`, intentionally aligned with Room 3 migration tooling to avoid Android-test consistent-resolution conflicts.
+- `kotlinx-serialization-core/json`: `1.8.1`, intentionally aligned with Room 3 migration tooling.
 - Room testing: `androidx.room3:room3-testing:3.0.1`.
 
 ### Database
@@ -92,32 +93,21 @@ Architecture rules:
 ### Stable identifiers and numeric truth
 
 - IDs are stable `String` / UUID-compatible identifiers, not autoincrement IDs.
-- Load is stored as integer grams in `Long`.
-  - Example: `42.5 kg = 42500`.
-- RIR is stored as integer tenths in `Int?`.
-  - Example: `1.5 RIR = 15`.
+- Load is stored as integer grams in `Long`; `42.5 kg = 42500`.
+- RIR is stored as integer tenths in `Int?`; `1.5 RIR = 15`.
 - Timestamps use `Long` epoch-style values.
-- `WorkoutSet` rows are the source of truth; volume, e1RM, PRs, progression, and trends must be recalculable from raw data.
+- `WorkoutSet` rows are the source of truth; volume, e1RM, PRs, progression, and trends remain derived/recalculable.
 
 ### Entities
 
-1. `ExerciseEntity`
-   - `id`, `name`, `equipment`, `unilateral`, `notes`, `archived`.
-   - defaults: rep min/max, target RIR tenths, rest seconds, load increment grams.
-2. `MuscleEntity`
-   - stable id + unique name.
-3. `ExerciseMuscleEntity`
-   - normalized many-to-many link with `PRIMARY` / `SECONDARY` role.
-4. `RoutineEntity`
-   - id, name, position, notes, archived.
-5. `RoutineExerciseEntity`
-   - id, routineId, exerciseId, position, targetSetCount, repMin, repMax, targetRirTenths, restSeconds, loadIncrementGrams, previousReferenceMode.
-6. `WorkoutEntity`
-   - id, optional routineId, title, startedAt, optional finishedAt, notes.
-7. `WorkoutExerciseEntity`
-   - id, workoutId, exerciseId, optional routineExerciseId, position, notes.
-8. `WorkoutSetEntity`
-   - id, workoutExerciseId, position, type, loadGrams, reps, optional rirTenths, optional completedAt.
+1. `ExerciseEntity`: id, name, equipment, unilateral, notes, archived, plus default rep range/RIR/rest/load increment.
+2. `MuscleEntity`: stable id + unique name.
+3. `ExerciseMuscleEntity`: normalized many-to-many link with `PRIMARY` / `SECONDARY` role.
+4. `RoutineEntity`: id, name, position, notes, archived.
+5. `RoutineExerciseEntity`: id, routineId, exerciseId, position, targetSetCount, repMin, repMax, targetRirTenths, restSeconds, loadIncrementGrams, previousReferenceMode.
+6. `WorkoutEntity`: id, optional routineId, title, startedAt, optional finishedAt, notes.
+7. `WorkoutExerciseEntity`: id, workoutId, exerciseId, optional routineExerciseId, position, notes.
+8. `WorkoutSetEntity`: id, workoutExerciseId, position, type, loadGrams, reps, optional rirTenths, optional completedAt.
 
 Constants:
 
@@ -127,42 +117,28 @@ Constants:
 
 ### Historical integrity / foreign-key policy
 
-- Exercise → historical workout references use `RESTRICT`; normal user flow is archive, not deletion.
+- Exercise → historical workout references use `RESTRICT`; archive is the normal product flow.
 - Routine → Workout uses `SET_NULL`, so historical workouts survive routine removal.
 - RoutineExercise → WorkoutExercise uses `SET_NULL`, so completed workout history survives template changes.
-- Routine → RoutineExercise may cascade because routine exercises are template rows, not completed workout truth.
-- Workout → WorkoutExercise and WorkoutExercise → WorkoutSet may cascade only within destruction of a workout aggregate; normal product UX should avoid accidental destructive flows.
-- Exercise-Muscle links can cascade with their owning master data because completed workout truth does not depend on those join rows.
+- Routine → RoutineExercise may cascade because template rows are not completed workout truth.
+- Workout → WorkoutExercise and WorkoutExercise → WorkoutSet cascade only inside a workout aggregate; product UX must avoid accidental destructive flows.
+- Exercise-Muscle links can cascade with master data because completed workout truth does not depend on those join rows.
 
 ### DAOs / repositories
 
-- `ExerciseDao` / `ExerciseRepository`:
-  - observe active exercises,
-  - get by id,
-  - save/upsert,
-  - archive,
-  - observe/link muscles.
-- `RoutineDao` / `RoutineRepository`:
-  - observe active routines,
-  - observe ordered routine exercises,
-  - save/upsert routine,
-  - save/upsert routine exercise,
-  - archive.
-- `WorkoutDao` / `WorkoutRepository`:
-  - save workout/exercise/set,
-  - fetch workout/exercises/sets,
-  - observe full exercise history,
-  - previous comparable workout resolution.
+- `ExerciseDao` / `ExerciseRepository`: observe active exercises, get by id, save/upsert, archive, observe/link muscles.
+- `RoutineDao` / `RoutineRepository`: observe active routines, observe ordered routine exercises, save/upsert routine and routine exercise, archive.
+- `WorkoutDao` / `WorkoutRepository`: save workout/exercise/set, fetch workout/exercises/sets, observe exercise history, previous comparable workout resolution.
 
 Previous-session behavior:
 
-- `previousAnyWorkout(exerciseId, beforeStartedAt)` returns the latest finished workout containing the exercise before the current start time.
-- `previousSameRoutine(exerciseId, routineId, beforeStartedAt)` restricts that lookup to the same routine.
+- `previousAnyWorkout(exerciseId, beforeStartedAt)` = latest finished workout containing the exercise before the current start.
+- `previousSameRoutine(exerciseId, routineId, beforeStartedAt)` = same lookup restricted to the same routine.
 - Repository dispatches by `PreviousReferenceMode`.
 
-## 4. PR #2 tests and CI acceptance
+## 4. PR2 test/CI baseline
 
-Implemented/verified tests cover:
+Verified coverage:
 
 - complete workout/exercise/set persistence,
 - exact `42.5 kg ↔ 42500 g`,
@@ -170,40 +146,38 @@ Implemented/verified tests cover:
 - Exercise ↔ Muscle relations,
 - ordered `RoutineExercise`,
 - ordered `WorkoutSet`,
-- exercise history query,
+- exercise history,
 - `ANY_WORKOUT`,
 - `SAME_ROUTINE`,
-- archiving Exercise without losing historical workout data,
-- archiving Routine without losing historical workout data,
-- close/reopen an on-disk Room DB,
-- Room `MigrationTestHelper` baseline for schema v1.
+- archive Exercise without historical loss,
+- archive Routine without historical loss,
+- close/reopen on-disk Room DB,
+- Room `MigrationTestHelper` schema-v1 baseline.
 
-CI workflow currently runs on pull requests and pushes to `main`:
+CI currently runs on pull requests and pushes to `main`:
 
 1. Unit tests.
-2. Verify committed Room schema (`git diff --exit-code -- app/schemas`).
+2. Verify committed Room schema.
 3. Upload `gymtracker-room-schema`.
 4. Enable KVM.
-5. Run Room instrumented DB tests on Android emulator API 35 / Google APIs / x86_64.
+5. Room instrumented DB tests on emulator API 35 / Google APIs / x86_64.
 6. Lint.
 7. Assemble debug APK.
-8. Upload `gymtracker-debug-apk` with 14-day retention.
+8. Upload `gymtracker-debug-apk` for 14 days.
 
-## 5. Next stage after PR #2 is merged — Issue #3 / PR #3
-
-Do **not** begin PR #3 until PR #11 is merged and issue #2 is completed.
+## 5. Current stage — Issue #3 / PR3: Exercises and Routine Editor
 
 ### Exercises
 
 - searchable library,
 - unlimited custom exercises,
-- create/edit,
+- create/edit/archive,
 - primary and secondary muscles,
 - equipment,
 - unilateral flag,
 - notes,
 - default progression settings,
-- archive instead of historical destruction.
+- never destroy historical workout data.
 
 ### Routines
 
@@ -218,20 +192,19 @@ Do **not** begin PR #3 until PR #11 is merged and issue #2 is completed.
 - `loadIncrementGrams`,
 - `previousReferenceMode` = `ANY_WORKOUT` / `SAME_ROUTINE`.
 
-### PR #3 UX requirements
+### PR3 UX requirements
 
+- Research current official Android / Material 3 guidance before coding.
 - Native Compose + Material 3.
-- Research current official Android / Material 3 guidance before implementation.
 - Optimize for one-handed use and very low interaction count.
 - Interactive touch targets at least 48dp.
 - Offline only; no account/cloud.
-- Do not implement the workout logger in PR #3; active workout is PR #4.
-- Prefer persistent top-level navigation only when justified by the current information architecture; do not add navigation chrome just to fill space.
-- Use clear active/archived states and reversible archive flows where practical.
-- Search should be immediately useful for growing local libraries.
-- Forms should validate in place and avoid allowing invalid routine-progression combinations to reach Room.
+- Do not implement the workout logger in PR3; active workout is PR4.
+- Search must remain immediately useful as the local library grows.
+- Forms validate in place and never allow invalid routine-progression combinations to reach Room.
+- Archive flows must preserve history and should be reversible where practical.
 
-### PR #3 required tests
+### PR3 required tests
 
 - create/edit/archive Exercise,
 - search,
@@ -244,13 +217,13 @@ Do **not** begin PR #3 until PR #11 is merged and issue #2 is completed.
 - relevant ViewModel/state tests,
 - full CI green.
 
-Update this file before PR #3 is considered complete.
+Update this file before PR3 is considered complete.
 
 ## 6. Roadmap
 
 - PR #1 — Android foundation — **MERGED**.
-- PR #2 / issue #2 — Room local data foundation — **current closing stage at time of this update**.
-- PR #3 / issue #3 — Exercises and Routine Editor.
+- PR #2 / issue #2 — Room local data foundation — **MERGED / COMPLETED**.
+- PR #3 / issue #3 — Exercises and Routine Editor — **CURRENT**.
 - PR #4 / issue #4 — Active Workout Logger: **PREVIOUS + TARGET + TODAY**.
 - PR #5 / issue #5 — Unlimited History and PR Engine.
 - PR #6 / issue #6 — Progress Analytics.
@@ -259,6 +232,6 @@ Update this file before PR #3 is considered complete.
 - Issue #9 — post-V1 Health Connect recovery context.
 - Issue #10 — post-V1 Wear OS companion.
 
-## 7. Canonical next prompt — PR #3
+## 7. Canonical next prompt — PR3
 
-Continue GymTracker from the real GitHub state in `German-Choconta/tareas`. Read `PROJECT_CONTEXT.md` first, then verify `main`, issue #3, and all relevant code directly in GitHub; GitHub is the source of truth. Do not touch Pulso/pulso-finanzas, and never commit real workout/health data or secrets because the repository is public. Confirm PR #11 / issue #2 are fully merged/completed before changing product code. Then implement issue #3 / PR3: Exercises and Routine Editor on a dedicated `feat/...` branch. Before coding, research current official Android/Jetpack Compose/Material 3 UX guidance for searchable libraries, forms, one-handed interaction, accessibility, 48dp touch targets, list reordering, archive flows, and state handling. Build a searchable unlimited exercise library with create/edit/archive, custom exercises, equipment, unilateral, notes, default progression settings, and normalized primary/secondary muscle assignments. Build unlimited routines with create/edit/archive and ordered routine exercises supporting targetSetCount, repMin, repMax, targetRirTenths, restSeconds, loadIncrementGrams, and previousReferenceMode ANY_WORKOUT/SAME_ROUTINE. Keep Room as the canonical persistence layer, preserve all historical workout data, and do not implement the workout logger yet. Add robust validation plus tests for Exercise CRUD/archive/search/muscles, Routine CRUD/archive, add/remove/reorder RoutineExercise, invalid rep/RIR/rest/load-increment input, persistence after DB reopen, history preservation, and relevant ViewModel/state behavior. Keep UI native Compose + Material 3, offline, account-free, one-hand friendly, low-interaction, and >=48dp targets. Update `PROJECT_CONTEXT.md`, ensure complete CI is green, and leave the PR ready/mergeable. When PR3 is finished, stop and provide a concrete summary plus the complete prompt for PR4 Active Workout Logger centered on PREVIOUS + TARGET + TODAY.
+Continue GymTracker from the real GitHub state in `German-Choconta/tareas`. Read `PROJECT_CONTEXT.md` first, then verify `main`, issue #3, and all relevant code directly in GitHub; GitHub is the source of truth. Do not touch Pulso/pulso-finanzas, and never commit real workout/health data or secrets because the repository is public. Confirm PR #11 / issue #2 are merged/completed before changing product code. Then implement issue #3 / PR3: Exercises and Routine Editor on a dedicated `feat/...` branch. Before coding, research current official Android/Jetpack Compose/Material 3 UX guidance for searchable libraries, forms, one-handed interaction, accessibility, 48dp touch targets, list reordering, archive flows, and state handling. Build a searchable unlimited exercise library with create/edit/archive, custom exercises, equipment, unilateral, notes, default progression settings, and normalized primary/secondary muscle assignments. Build unlimited routines with create/edit/archive and ordered routine exercises supporting targetSetCount, repMin, repMax, targetRirTenths, restSeconds, loadIncrementGrams, and previousReferenceMode ANY_WORKOUT/SAME_ROUTINE. Keep Room canonical, preserve historical workout data, and do not implement workout logging yet. Add robust validation plus tests for Exercise CRUD/archive/search/muscles, Routine CRUD/archive, add/remove/reorder RoutineExercise, invalid rep/RIR/rest/load-increment input, persistence after DB reopen, history preservation, and relevant ViewModel/state behavior. Keep UI native Compose + Material 3, offline, account-free, one-hand friendly, low-interaction, and >=48dp targets. Update `PROJECT_CONTEXT.md`, ensure complete CI is green, and leave the PR ready/mergeable. When PR3 is finished, stop and provide a concrete summary plus the complete prompt for PR4 Active Workout Logger centered on PREVIOUS + TARGET + TODAY.

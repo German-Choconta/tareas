@@ -250,6 +250,7 @@ All fixtures are synthetic and non-identifying.
 1. Initial Compose instrumented test imported nonexistent top-level `androidx.compose.ui.test.assertExists` → removed the invalid import; `assertExists()` remains the member assertion on `SemanticsNodeInteraction`.
 2. Action mutex acquisition initially occurred after coroutine launch, allowing rapid taps to enqueue competing operations → mutex is acquired synchronously with `tryLock()` before launch.
 3. Picker cancellation behavior was correct via nullable URI handling but not independently demonstrated → centralized `dispatchDocumentUri` no-op behavior and added a dedicated test.
+4. The first confirmation UI test coupled a synthetic recomposition transition with the dialog assertion and proved flaky on the API 35 emulator → split it into deterministic UI-state tests: preview proves it only requests destructive confirmation, while a separate rendered confirmation state proves the accessible explicit confirm action. `BackupViewModelTest` independently proves the real preview → confirmation → single restore transition.
 
 ## 6. CI contract
 

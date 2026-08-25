@@ -27,8 +27,10 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -84,6 +86,8 @@ class HistoryViewModel(
     private var progressAnalytics = emptyProgressAnalytics()
     private var analyticsJob: Job? = null
     private var analyticsZoneId: ZoneId = zoneIdProvider()
+    private var allTimeFactsExerciseId: String? = null
+    private var allTimeFactsDeferred: Deferred<List<PrSetFact>>? = null
 
     private val mutableState = MutableStateFlow(
         HistoryUiState(
@@ -158,6 +162,7 @@ class HistoryViewModel(
 
     fun closeExercise() {
         analyticsJob?.cancel()
+        resetSharedAllTimeFacts()
         savedStateHandle[SELECTED_EXERCISE_KEY] = null
         metrics.value = ExercisePersonalRecords()
         progressAnalytics = emptyProgressAnalytics()
@@ -270,6 +275,8 @@ class HistoryViewModel(
     }
 
     private fun prepareSelection(exerciseId: String) {
+        analyticsJob?.cancel()
+        resetSharedAllTimeFacts()
         metrics.value = ExercisePersonalRecords()
         progressAnalytics = emptyProgressAnalytics()
         mutableState.update { state ->
@@ -294,16 +301,26 @@ class HistoryViewModel(
 
     private fun loadMetrics(exerciseId: String) {
         viewModelScope.launch {
-            val facts = repository.prFacts(exerciseId)
-            val calculated = PersonalRecordEngine.calculate(facts)
-            if (selectedId.value != exerciseId) return@launch
-            metrics.value = calculated
-            mutableState.update { state ->
-                if (state.selectedExerciseId != exerciseId) state else state.copy(
-                    records = calculated,
-                    comparison = PersonalRecordEngine.previousSessionComparison(facts),
-                    loadingMetrics = false,
-                )
+            try {
+                val facts = sharedAllTimeFacts(exerciseId).await()
+                val calculated = PersonalRecordEngine.calculate(facts)
+                if (selectedId.value != exerciseId) return@launch
+                metrics.value = calculated
+                mutableState.update { state ->
+                    if (state.selectedExerciseId != exerciseId) state else state.copy(
+                        records = calculated,
+                        comparison = PersonalRecordEngine.previousSessionComparison(facts),
+                        loadingMetrics = false,
+                    )
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                if (selectedId.value == exerciseId) {
+                    mutableState.update { state ->
+                        state.copy(loadingMetrics = false)
+                    }
+                }
             }
         }
     }
@@ -346,7 +363,11 @@ class HistoryViewModel(
         mutableState.update { state -> state.copy(progress = state.progress.copy(loading = true, rangeValid = true, errorMessage = null)) }
         analyticsJob = viewModelScope.launch {
             try {
-                val facts = repository.analyticsFacts(exerciseId, resolution.bounds)
+                val facts = if (resolution.bounds == null) {
+                    sharedAllTimeFacts(exerciseId).await()
+                } else {
+                    repository.analyticsFacts(exerciseId, resolution.bounds)
+                }
                 val calculated = ProgressAnalyticsEngine.calculate(facts, range, zoneId)
                 if (selectedId.value != exerciseId || mutableState.value.progress.activeDateRange() != range) return@launch
 
@@ -396,6 +417,21 @@ class HistoryViewModel(
                 }
             }
         }
+    }
+
+    private fun sharedAllTimeFacts(exerciseId: String): Deferred<List<PrSetFact>> {
+        val existing = allTimeFactsDeferred
+        if (allTimeFactsExerciseId == exerciseId && existing != null && !existing.isCancelled) return existing
+
+        existing?.cancel()
+        allTimeFactsExerciseId = exerciseId
+        return viewModelScope.async { repository.prFacts(exerciseId) }.also { allTimeFactsDeferred = it }
+    }
+
+    private fun resetSharedAllTimeFacts() {
+        allTimeFactsDeferred?.cancel()
+        allTimeFactsDeferred = null
+        allTimeFactsExerciseId = null
     }
 
     private fun rebuildProgressChart(progress: ProgressUiState): ProgressUiState {

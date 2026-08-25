@@ -37,6 +37,14 @@ import com.germanchoconta.gymtracker.data.backup.BackupPreview
 import java.time.Instant
 import java.time.LocalDate
 
+internal fun backupCreateDocumentContract() =
+    ActivityResultContracts.CreateDocument(BackupFormat.MIME_TYPE)
+
+internal fun csvCreateDocumentContract() =
+    ActivityResultContracts.CreateDocument(BackupFormat.CSV_MIME_TYPE)
+
+internal fun backupOpenDocumentContract() = ActivityResultContracts.OpenDocument()
+
 @Composable
 fun BackupScreen(
     state: BackupUiState,
@@ -44,17 +52,13 @@ fun BackupScreen(
     onBack: () -> Unit,
 ) {
     val today = remember { LocalDate.now().toString() }
-    val backupLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument(BackupFormat.MIME_TYPE),
-    ) { uri ->
+    val backupLauncher = rememberLauncherForActivityResult(backupCreateDocumentContract()) { uri ->
         uri?.let(viewModel::exportBackup)
     }
-    val csvLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument(BackupFormat.CSV_MIME_TYPE),
-    ) { uri ->
+    val csvLauncher = rememberLauncherForActivityResult(csvCreateDocumentContract()) { uri ->
         uri?.let(viewModel::exportCsv)
     }
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val importLauncher = rememberLauncherForActivityResult(backupOpenDocumentContract()) { uri ->
         uri?.let(viewModel::importBackup)
     }
 

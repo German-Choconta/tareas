@@ -1,7 +1,7 @@
 # GymTracker — Project Context & Continuity
 
 > Canonical handoff. Read this first in every new GymTracker session, then verify everything directly in GitHub. **GitHub is the source of truth if this file is stale.**
-> Last updated: 2026-08-25 (America/Bogota), during PR5 finalization after the final code candidate passed full CI.
+> Last updated: 2026-08-25 (America/Bogota), after PR5 merged and its post-merge `main` CI passed.
 
 ## 0. Repository, safety, and permanent direction
 
@@ -15,7 +15,7 @@
 - `WorkoutSet` is canonical truth. PRs, e1RM, volume, trends, comparisons and progression are derived/recalculable unless a future stage proves persistence is necessary.
 - Work autonomously in GitHub, but do not advance stages silently. Do not start the next PR until the user explicitly continues.
 
-## 1. Completed stages before PR5
+## 1. Completed stages through PR5
 
 ### PR #1 — Android foundation
 - MERGED.
@@ -43,6 +43,20 @@
 - Artifacts from that known-good main run:
   - `gymtracker-debug-apk` — `9549764881`.
   - `gymtracker-room-schema` — `9549721821`.
+
+### PR #14 / Issue #5 — Unlimited History and PR Engine
+- MERGED / COMPLETED.
+- Final PR head: `a0381dac73709108a4935dd63379c39cd5958503`.
+- Final PR Android CI: `32855092000` (#96) — SUCCESS.
+- Final PR artifacts:
+  - `gymtracker-debug-apk` — `9566003937`.
+  - `gymtracker-room-schema` — `9565887051`.
+- Squash merge: `406b627a8c339523cd5ec121e9aeca9a973cc4ee`.
+- Issue #5: closed / completed.
+- Post-merge main CI: `32855708244` (#97) — SUCCESS.
+- Post-merge main artifacts:
+  - `gymtracker-debug-apk` — `9566270897`.
+  - `gymtracker-room-schema` — `9566130291`.
 
 ## 2. Android/toolchain baseline
 
@@ -116,7 +130,7 @@ Existing v2 indices relevant to PR5 include:
 - `index_workout_set_workoutExerciseId`;
 - unique `index_workout_set_workoutExerciseId_position`.
 
-## 4. PR4 logger invariants that PR5 must preserve
+## 4. PR4 logger invariants that PR5 preserves
 
 PR4 implements:
 - start workout transactionally from Routine;
@@ -149,20 +163,21 @@ PR5 additionally makes PR4 historical selectors deterministic when timestamps ti
 
 ## 5. PR #14 / Issue #5 — Unlimited History and PR Engine
 
-### GitHub state at this handoff commit
-- PR: **#14 — GymTracker PR 5: Unlimited history and PR engine**.
-- Branch: `feat/history-pr-engine`.
-- Base: `main` at `6bb28c9bb7d0bb1b530a21e573089be34e1efff7` when last verified.
-- Issue: **#5 — PR 5 — Unlimited history and PR engine**.
-- Issue #5 is still open while PR finalization is in progress; it must close as `completed` only when PR5 is actually merged.
-- PR remains draft until the exact head containing this updated handoff passes full CI and final reviews.
-- Final code candidate before this documentation commit: `698257903290a7a8612e9aac4d7e41c3e5f2fe87`.
-- Full code-candidate Android CI: run `32854385890` (#95) — **SUCCESS**.
-- Code-candidate artifacts:
-  - `gymtracker-debug-apk` — `9565748166`.
-  - `gymtracker-room-schema` — `9565620005`.
-- PR #14 had zero submitted reviews and zero inline review threads when verified after #95.
-- No PR5 merge has happened yet at the time this text is committed.
+### Final GitHub state
+- PR: **#14 — GymTracker PR 5: Unlimited history and PR engine** — merged / closed.
+- Final PR branch head: `a0381dac73709108a4935dd63379c39cd5958503`.
+- Final PR CI: `32855092000` (#96) — **SUCCESS**.
+- Final PR artifacts:
+  - `gymtracker-debug-apk` — `9566003937`.
+  - `gymtracker-room-schema` — `9565887051`.
+- Squash merge on `main`: `406b627a8c339523cd5ec121e9aeca9a973cc4ee`.
+- Issue #5: **closed / completed**.
+- Post-merge `main` CI: `32855708244` (#97) — **SUCCESS**.
+- Post-merge `main` artifacts:
+  - `gymtracker-debug-apk` — `9566270897`.
+  - `gymtracker-room-schema` — `9566130291`.
+- Final pre-merge review state: zero submitted reviews and zero inline review threads; PR was mergeable before ready/squash merge.
+- `Pulso` / `pulso-finanzas` was not touched.
 
 ### Scope implemented
 - unlimited local raw history by exercise;
@@ -401,15 +416,15 @@ Android CI runs on PRs and pushes to `main`:
 9. assemble debug APK;
 10. upload `gymtracker-debug-apk` (14 days).
 
-Before PR5 can merge:
-- exact head containing this updated `PROJECT_CONTEXT.md` must pass every step;
-- both artifacts must exist;
-- PR must be mergeable and review threads resolved;
-- privacy/scope/query/determinism/UX reviews must be complete;
-- then mark ready and squash merge;
-- verify Issue #5 closes as `completed`;
-- verify post-merge main CI + artifacts;
-- update this handoff on main with the actual squash/main CI/artifacts and verify the documentation head’s CI too.
+PR5 closure verification completed:
+- exact final PR head passed every CI step;
+- both final PR artifacts exist;
+- PR was mergeable and review threads were empty;
+- privacy/scope/query/determinism/UX reviews were completed;
+- PR was marked ready and squash merged;
+- Issue #5 closed as `completed`;
+- post-merge `main` CI passed and both artifacts exist;
+- this handoff is now updated on `main`; verify the documentation-only head CI before treating the closure record as fully known-good.
 
 ## 15. Roadmap
 
@@ -417,8 +432,8 @@ Before PR5 can merge:
 - PR #2 / Issue #2 — Room local data foundation — MERGED / COMPLETED.
 - PR #3 / Issue #3 — Exercises and Routine Editor — MERGED / COMPLETED.
 - PR #4 / Issue #4 — Workout Logger — MERGED / COMPLETED.
-- PR #5 / Issue #5 — Unlimited History and PR Engine — **IMPLEMENTED; CODE CI #95 GREEN; FINAL HANDOFF CI / MERGE PENDING**.
-- PR #6 / Issue #6 — Progress Analytics — **DO NOT START until PR5 is fully closed and the user explicitly continues**.
+- PR #5 / Issue #5 — Unlimited History and PR Engine — **MERGED / COMPLETED**.
+- PR #6 / Issue #6 — Progress Analytics — **NEXT, BUT DO NOT START until the user explicitly continues**.
 - PR #7 / Issue #7 — Backup, Restore, CSV Export.
 - PR #8 / Issue #8 — V1 UX / reliability hardening.
 - Issue #9 — post-V1 Health Connect recovery context.
@@ -426,10 +441,8 @@ Before PR5 can merge:
 
 ## 16. Next action from this handoff
 
-1. Verify real GitHub state first.
-2. Finish PR #14 only; do not start PR6.
-3. Confirm CI on this exact documentation head is SUCCESS and both artifacts exist.
-4. Reconfirm mergeability/reviews/threads, synchronize PR status, mark ready and squash merge.
-5. Confirm Issue #5 closed/completed and post-merge main CI/artifacts.
-6. Update this file on main with exact final PR5 head, squash commit, CI IDs and artifact IDs; verify that final documentation head is green.
-7. Only after PR5 is fully closed may the next chat inspect Issue #6 and design PR6, and only when the user explicitly continues.
+1. Verify real GitHub state first; `main` is the source of truth.
+2. PR5 is closed. Do not reopen or rewrite its semantics unless a concrete regression is found.
+3. Do not start PR6 silently. Wait for the user to explicitly continue.
+4. When the user continues, inspect Issue #6 and current `main`, research current Android/Compose guidance as necessary, design PR6 before implementation, and preserve all PR1–PR5 invariants.
+5. PR6 must build on **LOG → COMPARE → UNDERSTAND → PROGRESS** and must not break **PREVIOUS + TARGET + TODAY** or replace raw history with derived analytics.

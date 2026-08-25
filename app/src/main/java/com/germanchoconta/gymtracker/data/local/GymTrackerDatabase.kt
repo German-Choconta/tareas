@@ -8,6 +8,8 @@ import androidx.room3.migration.Migration
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
 import java.util.UUID
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 @Database(
     entities = [
@@ -120,11 +122,13 @@ class WorkoutRepository(
     private val routineDao: RoutineDao,
     private val exerciseDao: ExerciseDao,
 ) {
-    suspend fun startFromRoutine(routineId: String, startedAt: Long): WorkoutEntity? {
-        workoutDao.getActiveWorkout()?.let { return it }
-        val routine = routineDao.getById(routineId)?.takeUnless { it.archived } ?: return null
+    private val startMutex = Mutex()
+
+    suspend fun startFromRoutine(routineId: String, startedAt: Long): WorkoutEntity? = startMutex.withLock {
+        workoutDao.getActiveWorkout()?.let { return@withLock it }
+        val routine = routineDao.getById(routineId)?.takeUnless { it.archived } ?: return@withLock null
         val template = routineDao.getExercises(routineId)
-        if (template.isEmpty()) return null
+        if (template.isEmpty()) return@withLock null
         val workout = WorkoutEntity(
             id = UUID.randomUUID().toString(),
             routineId = routine.id,
@@ -160,7 +164,7 @@ class WorkoutRepository(
             }
         }
         workoutDao.insertWorkoutAggregate(workout, workoutExercises, sets)
-        return workout
+        workout
     }
 
     suspend fun getActiveWorkout() = workoutDao.getActiveWorkout()
@@ -227,22 +231,17 @@ class WorkoutRepository(
         return true
     }
 
-    suspend fun addSet(workoutExerciseId: String): WorkoutSetEntity? {
-        val workoutExercise = workoutDao.getWorkoutExercise(workoutExerciseId) ?: return null
-        val workout = workoutDao.getWorkout(workoutExercise.workoutId) ?: return null
-        if (workout.finishedAt != null) return null
-        val sets = workoutDao.getSets(workoutExerciseId)
-        val set = WorkoutSetEntity(
-            id = UUID.randomUUID().toString(),
-            workoutExerciseId = workoutExerciseId,
-            position = (sets.maxOfOrNull { it.position } ?: -1) + 1,
-            type = SetTypes.WORK,
-            loadGrams = 0,
-            reps = 0,
+    suspend fun addSet(workoutExerciseId: String): WorkoutSetEntity? =
+        workoutDao.appendSetIfActive(
+            WorkoutSetEntity(
+                id = UUID.randomUUID().toString(),
+                workoutExerciseId = workoutExerciseId,
+                position = 0,
+                type = SetTypes.WORK,
+                loadGrams = 0,
+                reps = 0,
+            ),
         )
-        workoutDao.upsertSet(set)
-        return set
-    }
 
     suspend fun removeSet(setId: String, allowCompleted: Boolean = false): Boolean {
         val set = workoutDao.getSet(setId) ?: return false
@@ -255,17 +254,14 @@ class WorkoutRepository(
     }
 
     suspend fun addExercise(workoutId: String, exerciseId: String): WorkoutExerciseEntity? {
-        val workout = workoutDao.getWorkout(workoutId) ?: return null
-        if (workout.finishedAt != null) return null
         val exercise = exerciseDao.getById(exerciseId)?.takeUnless { it.archived } ?: return null
-        val current = workoutDao.getExercises(workoutId)
         val targetSetCount = 3
-        val workoutExercise = WorkoutExerciseEntity(
+        val candidate = WorkoutExerciseEntity(
             id = UUID.randomUUID().toString(),
             workoutId = workoutId,
             exerciseId = exercise.id,
             routineExerciseId = null,
-            position = (current.maxOfOrNull { it.position } ?: -1) + 1,
+            position = 0,
             targetSetCount = targetSetCount,
             repMin = exercise.defaultRepMin ?: 8,
             repMax = exercise.defaultRepMax ?: 12,
@@ -274,20 +270,17 @@ class WorkoutRepository(
             loadIncrementGrams = exercise.defaultLoadIncrementGrams ?: 2_500,
             previousReferenceMode = PreviousReferenceModes.ANY_WORKOUT,
         )
-        workoutDao.upsertExercise(workoutExercise)
-        repeat(targetSetCount) { position ->
-            workoutDao.upsertSet(
-                WorkoutSetEntity(
-                    id = UUID.randomUUID().toString(),
-                    workoutExerciseId = workoutExercise.id,
-                    position = position,
-                    type = SetTypes.WORK,
-                    loadGrams = 0,
-                    reps = 0,
-                ),
+        val sets = List(targetSetCount) { position ->
+            WorkoutSetEntity(
+                id = UUID.randomUUID().toString(),
+                workoutExerciseId = candidate.id,
+                position = position,
+                type = SetTypes.WORK,
+                loadGrams = 0,
+                reps = 0,
             )
         }
-        return workoutExercise
+        return workoutDao.appendWorkoutExerciseIfActive(candidate, sets)
     }
 
     suspend fun replaceExercise(workoutExerciseId: String, exerciseId: String): Boolean {

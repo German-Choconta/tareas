@@ -182,7 +182,7 @@ class PersonalRecordEngineTest {
                 setId = "synthetic-set-${index.toString().padStart(5, '0')}",
                 startedAt = index.toLong(),
                 loadGrams = 50_000L + index,
-                reps = 5 + index % 6,
+                reps = 10,
                 workoutId = "synthetic-workout-${index.toString().padStart(5, '0')}",
             )
         }

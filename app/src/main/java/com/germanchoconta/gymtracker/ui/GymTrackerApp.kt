@@ -4,9 +4,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -120,7 +120,7 @@ fun GymTrackerApp(
                     NavigationBarItem(
                         selected = appDestination == AppDestination.ROUTINES,
                         onClick = { appDestinationName = AppDestination.ROUTINES.name },
-                        icon = { Icon(Icons.Default.ListAlt, contentDescription = null) },
+                        icon = { Icon(Icons.AutoMirrored.Filled.ListAlt, contentDescription = null) },
                         label = { Text("Rutinas") },
                     )
                     NavigationBarItem(

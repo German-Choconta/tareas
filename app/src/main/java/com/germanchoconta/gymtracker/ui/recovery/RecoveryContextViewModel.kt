@@ -72,6 +72,12 @@ class RecoveryContextViewModel internal constructor(
                     return@launch
                 }
 
+                _uiState.update {
+                    it.copy(
+                        grantedPermissions = granted,
+                        context = null,
+                    )
+                }
                 val currentDay = today()
                 val currentZone = zoneId()
                 val raw = source.readRawContext(
@@ -114,7 +120,15 @@ class RecoveryContextViewModel internal constructor(
 
     fun disconnect() {
         if (!refreshMutex.tryLock()) return
-        _uiState.update { it.copy(loading = true, error = false) }
+        _uiState.update {
+            it.copy(
+                loading = true,
+                grantedPermissions = emptySet(),
+                context = null,
+                permissionChanged = false,
+                error = false,
+            )
+        }
         viewModelScope.launch {
             try {
                 source.disconnect()
@@ -122,7 +136,14 @@ class RecoveryContextViewModel internal constructor(
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
-                _uiState.update { it.copy(loading = false, error = true) }
+                _uiState.update {
+                    it.copy(
+                        loading = false,
+                        grantedPermissions = emptySet(),
+                        context = null,
+                        error = true,
+                    )
+                }
             } finally {
                 _uiState.update { it.copy(loading = false) }
                 refreshMutex.unlock()

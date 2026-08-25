@@ -5,10 +5,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.germanchoconta.gymtracker.domain.FrequencyBucketSize
+import com.germanchoconta.gymtracker.domain.ProgressMetric
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,5 +40,40 @@ class HistoryProgressUiTest {
         composeRule.onNodeWithText("Progreso").assertIsSelected()
         composeRule.onNodeWithText("Historial").performClick()
         composeRule.onNodeWithText("Historial").assertIsSelected()
+    }
+
+    @Test
+    fun progressContentShowsExplicitEmptyStateAndMetricControlUpdatesState() {
+        var state by mutableStateOf(
+            ProgressUiState(
+                metric = ProgressMetric.LOAD,
+                chart = emptyProgressChart(ProgressMetric.LOAD),
+            ),
+        )
+
+        composeRule.setContent {
+            MaterialTheme {
+                ProgressAnalyticsContent(
+                    state = state,
+                    onRangeModeChange = {},
+                    onStartDateChange = {},
+                    onEndDateChange = {},
+                    onMetricChange = { metric ->
+                        state = state.copy(metric = metric, chart = emptyProgressChart(metric))
+                    },
+                    onExactLoadChange = {},
+                    onFrequencyBucketChange = { _: FrequencyBucketSize -> },
+                    onPreviousPoint = {},
+                    onNextPoint = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Sin datos para esta vista").assertTextContains("Sin datos")
+        composeRule.onNodeWithText("Volumen").performClick()
+        composeRule.runOnIdle {
+            assertEquals(ProgressMetric.VOLUME, state.metric)
+            assertEquals(ProgressMetric.VOLUME, state.chart.metric)
+        }
     }
 }

@@ -27,6 +27,20 @@ enum class RawSleepStageType {
     REM,
 }
 
+data class RecoveryReadWindow(
+    val dayStart: Instant,
+    val nextDayStart: Instant,
+    val sleepReadStart: Instant,
+) {
+    companion object {
+        fun forDay(day: LocalDate, zoneId: ZoneId): RecoveryReadWindow = RecoveryReadWindow(
+            dayStart = day.atStartOfDay(zoneId).toInstant(),
+            nextDayStart = day.plusDays(1).atStartOfDay(zoneId).toInstant(),
+            sleepReadStart = day.minusDays(1).atStartOfDay(zoneId).toInstant(),
+        )
+    }
+}
+
 data class RawSleepStage(
     val startTime: Instant,
     val endTime: Instant,

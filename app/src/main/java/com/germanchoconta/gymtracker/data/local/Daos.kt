@@ -2,6 +2,7 @@ package com.germanchoconta.gymtracker.data.local
 
 import androidx.room3.Dao
 import androidx.room3.Query
+import androidx.room3.Transaction
 import androidx.room3.Upsert
 import kotlinx.coroutines.flow.Flow
 
@@ -20,6 +21,12 @@ interface ExerciseDao {
     suspend fun archive(id: String)
 }
 
+data class ExerciseMuscleAssignmentRow(
+    val muscleId: String,
+    val name: String,
+    val role: String,
+)
+
 @Dao
 interface MuscleDao {
     @Upsert
@@ -27,6 +34,9 @@ interface MuscleDao {
 
     @Upsert
     suspend fun upsertLink(link: ExerciseMuscleEntity)
+
+    @Query("SELECT * FROM muscle ORDER BY name COLLATE NOCASE")
+    fun observeAll(): Flow<List<MuscleEntity>>
 
     @Query(
         """
@@ -37,6 +47,29 @@ interface MuscleDao {
         """,
     )
     fun observeForExercise(exerciseId: String): Flow<List<MuscleEntity>>
+
+    @Query(
+        """
+        SELECT m.id AS muscleId, m.name AS name, em.role AS role
+        FROM muscle m
+        INNER JOIN exercise_muscle em ON em.muscleId = m.id
+        WHERE em.exerciseId = :exerciseId
+        ORDER BY CASE em.role WHEN 'PRIMARY' THEN 0 ELSE 1 END, m.name COLLATE NOCASE
+        """,
+    )
+    suspend fun getAssignments(exerciseId: String): List<ExerciseMuscleAssignmentRow>
+
+    @Query("DELETE FROM exercise_muscle WHERE exerciseId = :exerciseId")
+    suspend fun deleteLinksForExercise(exerciseId: String)
+
+    @Transaction
+    suspend fun replaceLinks(
+        exerciseId: String,
+        links: List<ExerciseMuscleEntity>,
+    ) {
+        deleteLinksForExercise(exerciseId)
+        links.forEach { upsertLink(it) }
+    }
 }
 
 @Dao
@@ -50,11 +83,47 @@ interface RoutineDao {
     @Query("SELECT * FROM routine WHERE archived = 0 ORDER BY position, name COLLATE NOCASE")
     fun observeActive(): Flow<List<RoutineEntity>>
 
+    @Query("SELECT * FROM routine WHERE id = :id LIMIT 1")
+    suspend fun getById(id: String): RoutineEntity?
+
     @Query("SELECT * FROM routine_exercise WHERE routineId = :routineId ORDER BY position")
     fun observeExercises(routineId: String): Flow<List<RoutineExerciseEntity>>
 
+    @Query("SELECT * FROM routine_exercise WHERE routineId = :routineId ORDER BY position")
+    suspend fun getExercises(routineId: String): List<RoutineExerciseEntity>
+
     @Query("UPDATE routine SET archived = 1 WHERE id = :id")
     suspend fun archive(id: String)
+
+    @Query("DELETE FROM routine_exercise WHERE id = :id")
+    suspend fun deleteExercise(id: String)
+
+    @Query("UPDATE routine_exercise SET position = :position WHERE id = :id")
+    suspend fun updateExercisePosition(id: String, position: Int)
+
+    /**
+     * Replaces a routine template atomically without violating the unique
+     * (routineId, position) index while items are reordered.
+     *
+     * Existing rows are first moved to unique negative temporary positions,
+     * then removed/upserted into their final non-negative order. Historical
+     * WorkoutExercise rows remain safe because their routineExerciseId FK is SET_NULL.
+     */
+    @Transaction
+    suspend fun saveWithExercises(
+        routine: RoutineEntity,
+        exercises: List<RoutineExerciseEntity>,
+    ) {
+        upsert(routine)
+        val existing = getExercises(routine.id)
+        existing.forEachIndexed { index, item ->
+            updateExercisePosition(item.id, -(index + 1))
+        }
+
+        val desiredIds = exercises.mapTo(hashSetOf()) { it.id }
+        existing.filterNot { it.id in desiredIds }.forEach { deleteExercise(it.id) }
+        exercises.forEach { upsertExercise(it) }
+    }
 }
 
 data class PreviousWorkoutRow(

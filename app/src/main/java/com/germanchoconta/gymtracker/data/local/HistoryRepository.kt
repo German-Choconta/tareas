@@ -1,0 +1,47 @@
+package com.germanchoconta.gymtracker.data.local
+
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import com.germanchoconta.gymtracker.domain.ExercisePersonalRecords
+import com.germanchoconta.gymtracker.domain.PersonalRecordEngine
+import com.germanchoconta.gymtracker.domain.PrSetFact
+import com.germanchoconta.gymtracker.domain.PreviousSessionComparison
+
+class HistoryRepository(private val historyDao: HistoryDao) {
+    fun observeExercisesWithFinishedHistory() = historyDao.observeExercisesWithFinishedHistory()
+
+    fun exerciseHistory(exerciseId: String) = Pager(
+        config = PagingConfig(
+            pageSize = 30,
+            initialLoadSize = 30,
+            prefetchDistance = 10,
+            enablePlaceholders = false,
+            maxSize = 150,
+        ),
+        pagingSourceFactory = { historyDao.pageFinishedExerciseHistory(exerciseId) },
+    ).flow
+
+    suspend fun prFacts(exerciseId: String): List<PrSetFact> =
+        historyDao.getExercisePrFacts(exerciseId).map(PrFactRow::toDomain)
+
+    suspend fun records(exerciseId: String): ExercisePersonalRecords =
+        PersonalRecordEngine.calculate(prFacts(exerciseId))
+
+    suspend fun previousSessionComparison(exerciseId: String): PreviousSessionComparison? =
+        PersonalRecordEngine.previousSessionComparison(prFacts(exerciseId))
+}
+
+internal fun PrFactRow.toDomain() = PrSetFact(
+    workoutId = workoutId,
+    workoutExerciseId = workoutExerciseId,
+    workoutSetId = workoutSetId,
+    startedAt = startedAt,
+    finishedAt = finishedAt,
+    workoutExercisePosition = workoutExercisePosition,
+    setPosition = setPosition,
+    type = type,
+    loadGrams = loadGrams,
+    reps = reps,
+    rirTenths = rirTenths,
+    completedAt = completedAt,
+)

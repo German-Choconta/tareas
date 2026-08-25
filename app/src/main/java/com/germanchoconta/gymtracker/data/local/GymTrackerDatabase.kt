@@ -124,6 +124,7 @@ class WorkoutRepository(
         workoutDao.getActiveWorkout()?.let { return it }
         val routine = routineDao.getById(routineId)?.takeUnless { it.archived } ?: return null
         val template = routineDao.getExercises(routineId)
+        if (template.isEmpty()) return null
         val workout = WorkoutEntity(
             id = UUID.randomUUID().toString(),
             routineId = routine.id,
@@ -178,6 +179,18 @@ class WorkoutRepository(
         return WorkoutAggregate(workout, exercises)
     }
 
+    suspend fun updateSetLoad(setId: String, loadGrams: Long): Boolean =
+        loadGrams >= 0L && workoutDao.updateSetLoad(setId, loadGrams) > 0
+
+    suspend fun updateSetReps(setId: String, reps: Int): Boolean =
+        reps in 0..1000 && workoutDao.updateSetReps(setId, reps) > 0
+
+    suspend fun updateSetRir(setId: String, rirTenths: Int?): Boolean =
+        (rirTenths == null || rirTenths in 0..100) && workoutDao.updateSetRir(setId, rirTenths) > 0
+
+    suspend fun updateSetType(setId: String, type: String): Boolean =
+        type in SetTypes.all && workoutDao.updateSetType(setId, type) > 0
+
     suspend fun updateSet(
         setId: String,
         loadGrams: Long,
@@ -188,19 +201,10 @@ class WorkoutRepository(
         if (loadGrams < 0L || reps !in 0..1000 || rirTenths?.let { it !in 0..100 } == true || type !in SetTypes.all) {
             return false
         }
-        val existing = workoutDao.getSet(setId) ?: return false
-        val workoutExercise = workoutDao.getWorkoutExercise(existing.workoutExerciseId) ?: return false
-        val workout = workoutDao.getWorkout(workoutExercise.workoutId) ?: return false
-        if (workout.finishedAt != null) return false
-        workoutDao.upsertSet(
-            existing.copy(
-                loadGrams = loadGrams,
-                reps = reps,
-                rirTenths = rirTenths,
-                type = type,
-            ),
-        )
-        return true
+        return updateSetLoad(setId, loadGrams) &&
+            updateSetReps(setId, reps) &&
+            updateSetRir(setId, rirTenths) &&
+            updateSetType(setId, type)
     }
 
     suspend fun setCompleted(setId: String, completedAt: Long?): Boolean {
@@ -209,7 +213,7 @@ class WorkoutRepository(
         val workout = workoutDao.getWorkout(workoutExercise.workoutId) ?: return false
         if (workout.finishedAt != null) return false
         if (completedAt != null && existing.reps <= 0) return false
-        workoutDao.upsertSet(existing.copy(completedAt = completedAt))
+        if (workoutDao.updateSetCompletedAt(setId, completedAt) == 0) return false
         if (completedAt != null) {
             val restSeconds = workoutExercise.restSeconds ?: 0
             if (restSeconds > 0) {
@@ -342,5 +346,15 @@ class WorkoutRepository(
             else workoutDao.previousSameRoutine(exerciseId, routineId, beforeStartedAt)
         }
         else -> workoutDao.previousAnyWorkout(exerciseId, beforeStartedAt)
+    }
+
+    suspend fun previousCompletedSets(
+        exerciseId: String,
+        referenceMode: String,
+        routineId: String?,
+        beforeStartedAt: Long,
+    ): List<WorkoutSetEntity> {
+        val previous = previousWorkout(exerciseId, referenceMode, routineId, beforeStartedAt) ?: return emptyList()
+        return workoutDao.getCompletedSets(previous.workoutExerciseId)
     }
 }

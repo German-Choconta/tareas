@@ -173,7 +173,7 @@ class RecoveryContextViewModelTest {
         source = source,
         today = { day },
         zoneId = { utc },
-    )
+    ).also { it.refresh() }
 
     private class FakeRecoverySource(
         var availabilityValue: RecoveryAvailability = RecoveryAvailability.AVAILABLE,

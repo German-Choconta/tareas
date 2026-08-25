@@ -1,0 +1,148 @@
+package com.germanchoconta.gymtracker.ui.history
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import androidx.paging.insertSeparators
+import androidx.paging.map
+import com.germanchoconta.gymtracker.data.local.HistoryExerciseRow
+import com.germanchoconta.gymtracker.data.local.HistoryRepository
+import com.germanchoconta.gymtracker.data.local.HistorySetRow
+import com.germanchoconta.gymtracker.domain.ExercisePersonalRecords
+import com.germanchoconta.gymtracker.domain.PersonalRecordEngine
+import com.germanchoconta.gymtracker.domain.PersonalRecordKind
+import com.germanchoconta.gymtracker.domain.PreviousSessionComparison
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+sealed interface HistoryListItem {
+    val stableKey: String
+
+    data class SessionHeader(
+        val workoutId: String,
+        val title: String,
+        val startedAt: Long,
+        val workoutNotes: String?,
+        val isVolumePrEvent: Boolean,
+    ) : HistoryListItem {
+        override val stableKey = "session-$workoutId"
+    }
+
+    data class SetItem(
+        val row: HistorySetRow,
+        val prKinds: Set<PersonalRecordKind>,
+    ) : HistoryListItem {
+        override val stableKey = "set-${row.workoutSetId}"
+    }
+}
+
+data class HistoryUiState(
+    val exercises: List<HistoryExerciseRow> = emptyList(),
+    val selectedExerciseId: String? = null,
+    val selectedExercise: HistoryExerciseRow? = null,
+    val records: ExercisePersonalRecords = ExercisePersonalRecords(),
+    val comparison: PreviousSessionComparison? = null,
+    val loadingMetrics: Boolean = false,
+)
+
+class HistoryViewModel(private val repository: HistoryRepository) : ViewModel() {
+    private val selectedId = MutableStateFlow<String?>(null)
+    private val metrics = MutableStateFlow(ExercisePersonalRecords())
+    private val mutableState = MutableStateFlow(HistoryUiState())
+    val uiState: StateFlow<HistoryUiState> = mutableState.asStateFlow()
+
+    val historyItems = selectedId
+        .flatMapLatest { exerciseId ->
+            if (exerciseId == null) {
+                flowOf(PagingData.empty())
+            } else {
+                repository.exerciseHistory(exerciseId).flatMapLatest { rows ->
+                    val kindsBySet = PersonalRecordEngine.eventKindsBySet(metrics.value)
+                    val volumePrWorkouts = PersonalRecordEngine.volumePrWorkoutIds(metrics.value)
+                    flowOf(
+                        rows.map { row ->
+                            HistoryListItem.SetItem(row, kindsBySet[row.workoutSetId].orEmpty())
+                        }.insertSeparators { before, after ->
+                            val afterSet = after as? HistoryListItem.SetItem ?: return@insertSeparators null
+                            val beforeSet = before as? HistoryListItem.SetItem
+                            if (beforeSet == null || beforeSet.row.workoutId != afterSet.row.workoutId) {
+                                HistoryListItem.SessionHeader(
+                                    workoutId = afterSet.row.workoutId,
+                                    title = afterSet.row.workoutTitle,
+                                    startedAt = afterSet.row.startedAt,
+                                    workoutNotes = afterSet.row.workoutNotes,
+                                    isVolumePrEvent = afterSet.row.workoutId in volumePrWorkouts,
+                                )
+                            } else null
+                        },
+                    )
+                }
+            }
+        }
+        .cachedIn(viewModelScope)
+
+    init {
+        viewModelScope.launch {
+            repository.observeExercisesWithFinishedHistory().collect { exercises ->
+                mutableState.update { state ->
+                    state.copy(
+                        exercises = exercises,
+                        selectedExercise = exercises.firstOrNull { it.id == state.selectedExerciseId },
+                    )
+                }
+            }
+        }
+    }
+
+    fun selectExercise(exerciseId: String) {
+        selectedId.value = exerciseId
+        mutableState.update { state ->
+            state.copy(
+                selectedExerciseId = exerciseId,
+                selectedExercise = state.exercises.firstOrNull { it.id == exerciseId },
+                loadingMetrics = true,
+                records = ExercisePersonalRecords(),
+                comparison = null,
+            )
+        }
+        viewModelScope.launch {
+            val facts = repository.prFacts(exerciseId)
+            val calculated = PersonalRecordEngine.calculate(facts)
+            metrics.value = calculated
+            mutableState.update { state ->
+                if (state.selectedExerciseId != exerciseId) state else state.copy(
+                    records = calculated,
+                    comparison = PersonalRecordEngine.previousSessionComparison(facts),
+                    loadingMetrics = false,
+                )
+            }
+        }
+    }
+
+    fun closeExercise() {
+        selectedId.value = null
+        metrics.value = ExercisePersonalRecords()
+        mutableState.value = mutableState.value.copy(
+            selectedExerciseId = null,
+            selectedExercise = null,
+            records = ExercisePersonalRecords(),
+            comparison = null,
+            loadingMetrics = false,
+        )
+    }
+
+    companion object {
+        fun factory(repository: HistoryRepository): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T = HistoryViewModel(repository) as T
+            }
+    }
+}

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -47,7 +48,7 @@ class RecoveryContextScreenTest {
     }
 
     @Test
-    fun deniedAndPartialPermissionsHaveDistinctActions() {
+    fun deniedPermissionOffersOptInWithoutBlockingApp() {
         var permissionRequests = 0
         setScreen(
             state = RecoveryUiState(availability = RecoveryAvailability.AVAILABLE),
@@ -57,7 +58,10 @@ class RecoveryContextScreenTest {
         composeRule.onNodeWithText("Sin permisos de Health Connect.").assertIsDisplayed()
         composeRule.onNodeWithText("Conectar Health Connect").performClick()
         assertEquals(1, permissionRequests)
+    }
 
+    @Test
+    fun partialPermissionIsDistinctFromEmptyData() {
         setScreen(
             RecoveryUiState(
                 availability = RecoveryAvailability.AVAILABLE,
@@ -65,6 +69,7 @@ class RecoveryContextScreenTest {
                 context = emptyContext(),
             ),
         )
+
         composeRule.onNodeWithText("Permisos parciales: 1 de 3.").assertIsDisplayed()
         composeRule.onNodeWithText("Revisar permisos").assertIsDisplayed()
         composeRule.onNodeWithText("No hay datos para hoy").assertIsDisplayed()

@@ -104,10 +104,6 @@ interface RoutineDao {
     @Query("UPDATE routine_exercise SET position = :position WHERE id = :id")
     suspend fun updateExercisePosition(id: String, position: Int)
 
-    /**
-     * Replaces a routine template atomically without violating the unique
-     * (routineId, position) index while items are reordered.
-     */
     @Transaction
     suspend fun saveWithExercises(
         routine: RoutineEntity,
@@ -182,6 +178,66 @@ interface WorkoutDao {
     )
     suspend fun getCompletedSets(workoutExerciseId: String): List<WorkoutSetEntity>
 
+    @Query(
+        """
+        UPDATE workout_set SET loadGrams = :loadGrams
+        WHERE id = :setId AND workoutExerciseId IN (
+            SELECT we.id FROM workout_exercise we
+            INNER JOIN workout w ON w.id = we.workoutId
+            WHERE w.finishedAt IS NULL
+        )
+        """,
+    )
+    suspend fun updateSetLoad(setId: String, loadGrams: Long): Int
+
+    @Query(
+        """
+        UPDATE workout_set SET reps = :reps
+        WHERE id = :setId AND workoutExerciseId IN (
+            SELECT we.id FROM workout_exercise we
+            INNER JOIN workout w ON w.id = we.workoutId
+            WHERE w.finishedAt IS NULL
+        )
+        """,
+    )
+    suspend fun updateSetReps(setId: String, reps: Int): Int
+
+    @Query(
+        """
+        UPDATE workout_set SET rirTenths = :rirTenths
+        WHERE id = :setId AND workoutExerciseId IN (
+            SELECT we.id FROM workout_exercise we
+            INNER JOIN workout w ON w.id = we.workoutId
+            WHERE w.finishedAt IS NULL
+        )
+        """,
+    )
+    suspend fun updateSetRir(setId: String, rirTenths: Int?): Int
+
+    @Query(
+        """
+        UPDATE workout_set SET type = :type
+        WHERE id = :setId AND workoutExerciseId IN (
+            SELECT we.id FROM workout_exercise we
+            INNER JOIN workout w ON w.id = we.workoutId
+            WHERE w.finishedAt IS NULL
+        )
+        """,
+    )
+    suspend fun updateSetType(setId: String, type: String): Int
+
+    @Query(
+        """
+        UPDATE workout_set SET completedAt = :completedAt
+        WHERE id = :setId AND workoutExerciseId IN (
+            SELECT we.id FROM workout_exercise we
+            INNER JOIN workout w ON w.id = we.workoutId
+            WHERE w.finishedAt IS NULL
+        )
+        """,
+    )
+    suspend fun updateSetCompletedAt(setId: String, completedAt: Long?): Int
+
     @Transaction
     suspend fun insertWorkoutAggregate(
         workout: WorkoutEntity,
@@ -196,7 +252,14 @@ interface WorkoutDao {
     @Query("UPDATE workout SET notes = :notes WHERE id = :workoutId AND finishedAt IS NULL")
     suspend fun updateWorkoutNotes(workoutId: String, notes: String?)
 
-    @Query("UPDATE workout_exercise SET notes = :notes WHERE id = :workoutExerciseId")
+    @Query(
+        """
+        UPDATE workout_exercise SET notes = :notes
+        WHERE id = :workoutExerciseId AND workoutId IN (
+            SELECT id FROM workout WHERE finishedAt IS NULL
+        )
+        """,
+    )
     suspend fun updateWorkoutExerciseNotes(workoutExerciseId: String, notes: String?)
 
     @Query(

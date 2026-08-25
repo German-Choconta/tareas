@@ -1,5 +1,6 @@
 package com.germanchoconta.gymtracker.ui.backup
 
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +46,10 @@ internal fun csvCreateDocumentContract() =
 
 internal fun backupOpenDocumentContract() = ActivityResultContracts.OpenDocument()
 
+internal fun dispatchDocumentUri(uri: Uri?, action: (Uri) -> Unit) {
+    if (uri != null) action(uri)
+}
+
 @Composable
 fun BackupScreen(
     state: BackupUiState,
@@ -53,13 +58,13 @@ fun BackupScreen(
 ) {
     val today = remember { LocalDate.now().toString() }
     val backupLauncher = rememberLauncherForActivityResult(backupCreateDocumentContract()) { uri ->
-        uri?.let(viewModel::exportBackup)
+        dispatchDocumentUri(uri, viewModel::exportBackup)
     }
     val csvLauncher = rememberLauncherForActivityResult(csvCreateDocumentContract()) { uri ->
-        uri?.let(viewModel::exportCsv)
+        dispatchDocumentUri(uri, viewModel::exportCsv)
     }
     val importLauncher = rememberLauncherForActivityResult(backupOpenDocumentContract()) { uri ->
-        uri?.let(viewModel::importBackup)
+        dispatchDocumentUri(uri, viewModel::importBackup)
     }
 
     BackupScreenContent(

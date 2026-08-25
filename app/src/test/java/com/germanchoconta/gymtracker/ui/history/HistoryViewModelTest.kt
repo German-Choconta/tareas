@@ -149,7 +149,7 @@ class HistoryViewModelTest {
     }
 
     @Test
-    fun switchingMetricReusesLoadedAnalyticsWithoutRoomRequery() = runTest(dispatcher) {
+    fun switchingMetricAndExactLoadReusesLoadedAnalyticsWithoutRoomRequery() = runTest(dispatcher) {
         val exerciseId = "synthetic-metric-switch"
         val dao = FakeHistoryDao(
             exercises = listOf(exercise(exerciseId, 2_000L, 2L)),
@@ -173,8 +173,13 @@ class HistoryViewModelTest {
 
         viewModel.setProgressMetric(ProgressMetric.REPS_AT_EXACT_LOAD)
         assertEquals(ProgressMetric.REPS_AT_EXACT_LOAD, viewModel.uiState.value.progress.chart.metric)
-        assertNotNull(viewModel.uiState.value.progress.selectedExactLoadGrams)
+        assertEquals(55_000L, viewModel.uiState.value.progress.selectedExactLoadGrams)
         assertTrue(viewModel.uiState.value.progress.chart.points.isNotEmpty())
+
+        viewModel.setExactLoad(50_000L)
+        assertEquals(50_000L, viewModel.uiState.value.progress.selectedExactLoadGrams)
+        assertEquals(1, viewModel.uiState.value.progress.chart.points.size)
+        assertEquals(8L, viewModel.uiState.value.progress.chart.points.single().exactValue.toLong())
 
         assertEquals(allQueries, dao.allFactsQueryCount)
         assertEquals(boundedQueries, dao.rangeQueryCount)

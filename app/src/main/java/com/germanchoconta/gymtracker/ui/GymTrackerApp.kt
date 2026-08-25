@@ -44,7 +44,7 @@ import com.germanchoconta.gymtracker.ui.management.ExerciseEditorScreen
 import com.germanchoconta.gymtracker.ui.management.ExerciseLibraryViewModel
 import com.germanchoconta.gymtracker.ui.management.RoutineEditorScreen
 import com.germanchoconta.gymtracker.ui.management.RoutineLibraryViewModel
-import com.germanchoconta.gymtracker.ui.recovery.RecoveryContextRoute
+import com.germanchoconta.gymtracker.ui.recovery.RecoveryContextEntry
 import com.germanchoconta.gymtracker.ui.recovery.RecoveryContextViewModel
 import com.germanchoconta.gymtracker.ui.workout.WorkoutLoggerScreen
 import com.germanchoconta.gymtracker.ui.workout.WorkoutLoggerViewModel
@@ -125,7 +125,7 @@ fun GymTrackerApp(
             onDismissFinish = workoutViewModel::dismissFinishConfirmation,
             onMessageShown = workoutViewModel::clearMessage,
         )
-        recoveryContextOpen -> RecoveryContextRoute(
+        recoveryContextOpen -> RecoveryContextEntry(
             state = recoveryState,
             viewModel = recoveryViewModel,
             onBack = {
@@ -202,10 +202,7 @@ fun GymTrackerApp(
                         AppDestination.HISTORY -> HistoryScreen(
                             state = historyState,
                             viewModel = historyViewModel,
-                            onRecoveryContext = {
-                                recoveryViewModel.refresh()
-                                recoveryContextOpen = true
-                            },
+                            onRecoveryContext = { recoveryContextOpen = true },
                             onManageData = { dataManagementOpen = true },
                         )
                     }

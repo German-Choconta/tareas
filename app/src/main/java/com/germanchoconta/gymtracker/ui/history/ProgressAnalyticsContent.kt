@@ -285,25 +285,23 @@ private fun AnalyticsChartCard(state: ProgressUiState) {
 @Composable
 private fun ProgressVicoChart(chart: ProgressChartState) {
     val points = chart.points
+    val temporalAxis = remember(points) { buildProgressTemporalAxis(points) }
     val modelProducer = remember { CartesianChartModelProducer() }
-    val bottomAxisFormatter = remember(points) {
+    val bottomAxisFormatter = remember(temporalAxis) {
         object : CartesianValueFormatter {
             override fun format(
                 context: CartesianMeasuringContext,
                 value: Double,
                 verticalAxisPosition: Axis.Position.Vertical?,
-            ): CharSequence {
-                val point = points.getOrNull(value.toInt())
-                return point?.localDate?.format(CHART_DATE_FORMATTER).orEmpty()
-            }
+            ): CharSequence = temporalAxis.dateAt(value)?.format(CHART_DATE_FORMATTER).orEmpty()
         }
     }
 
-    LaunchedEffect(points, chart.metric) {
+    LaunchedEffect(points, chart.metric, temporalAxis.xValues) {
         modelProducer.runTransaction {
             lineModel {
                 series(
-                    x = points.indices.toList(),
+                    x = temporalAxis.xValues,
                     y = points.map { it.chartYValue(chart.metric) },
                 )
             }
@@ -315,6 +313,7 @@ private fun ProgressVicoChart(chart: ProgressChartState) {
             append("Gráfica de ${chart.metric.label()}. ")
             append(chart.explanation)
             append(" ${chart.sourcePointCount} puntos de origen. ")
+            append("El eje horizontal conserva el espaciado temporal relativo. ")
             append("Los valores exactos están disponibles en el detalle debajo de la gráfica.")
         }
     }

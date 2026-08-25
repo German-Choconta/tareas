@@ -1,218 +1,128 @@
-# GymTracker Data Model — PR 2 Design
+# GymTracker Data Model — Room v1
 
-> `PROJECT_CONTEXT.md` is canonical. This document expands the Room schema design for issue #2.
+> `PROJECT_CONTEXT.md` is canonical. This file documents the implemented Room v1 schema from PR #11 / issue #2.
 
-## Design goals
+## Goals
 
 - Unlimited local history.
-- Raw workout sets remain canonical.
-- Safe export/import and future optional sync.
-- No floating-point equality problems for load.
-- No cascade path may erase completed workout history.
-- Queries for “previous set/session”, all-time history, PRs, and per-muscle analytics must be index-friendly.
+- Raw workout sets are canonical.
+- Exact numeric storage for load and RIR.
+- Safe archive semantics for historical exercises/routines.
+- Index-friendly previous-session and history queries.
+- Exported Room schema versioned in Git for future migration tests.
 
 ## Canonical representations
 
-- IDs: UUID strings.
-- Load: integer grams (`Long`). Example: 42.5 kg = `42500`.
-- RIR: integer tenths (`Int?`). Example: 1.5 RIR = `15`; null means not recorded.
-- Reps: integer.
-- Time: epoch/Instant-compatible integer representation.
-- Positions/order: integer.
+- IDs: stable UUID-compatible strings (`TEXT`).
+- Load: integer grams (`Long`). `42.5 kg = 42500`.
+- RIR: integer tenths (`Int?`). `1.5 RIR = 15`; null = not recorded.
+- Reps/order: integers.
+- Time: epoch-compatible `Long`.
+- Set type: `WARMUP`, `WORK`, `DROP`, `FAILURE`.
+- Previous reference: `ANY_WORKOUT` or `SAME_ROUTINE`.
+- Muscle role: `PRIMARY` or `SECONDARY`.
 
-The UI may display kg or lb, but stored workout truth remains unit-independent grams.
+Derived volume, e1RM, PRs, plateau flags, and progression recommendations never replace raw rows.
 
-## Relationships
+## Implemented tables
 
-```text
-Exercise 1---* ExerciseMuscle *---1 Muscle
+### `exercise`
+Primary key: `id`.
+Fields: name, equipment, unilateral, notes, archived, default rep/RIR/rest/load-increment settings.
+Index: name.
 
-Routine 1---* RoutineExercise *---1 Exercise
+### `muscle`
+Primary key: `id`.
+Unique index: name.
 
-Routine 0..1---* Workout
-Workout 1---* WorkoutExercise *---1 Exercise
-RoutineExercise 0..1---* WorkoutExercise
-WorkoutExercise 1---* WorkoutSet
-```
+### `exercise_muscle`
+Composite primary key: (`exerciseId`, `muscleId`).
+FKs: Exercise and Muscle, cascading only the join row when a non-historical parent can actually be deleted.
+Indexes: exerciseId, muscleId.
 
-## Tables
+### `routine`
+Primary key: `id`.
+Fields: name, position, notes, archived.
+Index: position.
 
-### exercises
+### `routine_exercise`
+Primary key: `id`.
+FKs:
+- Routine -> CASCADE for configuration rows.
+- Exercise -> RESTRICT so an exercise referenced by configuration cannot be silently removed.
 
-- `id TEXT PRIMARY KEY`
-- `name TEXT NOT NULL`
-- `equipment TEXT NULL`
-- `is_unilateral INTEGER NOT NULL`
-- `notes TEXT NULL`
-- `is_archived INTEGER NOT NULL DEFAULT 0`
-- default progression fields as appropriate for exercises without a routine override
-- created/updated timestamps
+Fields include target set count, rep range, target RIR tenths, rest seconds, load increment grams, and previous reference mode.
+Indexes: routineId, exerciseId, unique (`routineId`, `position`).
 
-Suggested indexes:
-- normalized/searchable name
-- archived state if query plans justify it
+### `workout`
+Primary key: `id`.
+Nullable Routine FK uses SET_NULL, so deleting routine configuration cannot delete completed workout history.
+Indexes: routineId, startedAt.
 
-Historical exercises are archived, not hard-deleted.
+### `workout_exercise`
+Primary key: `id`.
+FKs:
+- Workout -> CASCADE (explicit workout deletion owns its child rows).
+- Exercise -> RESTRICT (historical exercise identity is protected).
+- RoutineExercise -> SET_NULL (routine configuration can disappear without losing workout history).
 
-### muscles
+Indexes: workoutId, exerciseId, routineExerciseId, unique (`workoutId`, `position`).
 
-- `id TEXT PRIMARY KEY`
-- `name TEXT NOT NULL UNIQUE`
+### `workout_set`
+Primary key: `id`.
+FK: WorkoutExercise -> CASCADE.
+Fields: position, type, loadGrams, reps, rirTenths, completedAt.
+Indexes: workoutExerciseId, unique (`workoutExerciseId`, `position`).
 
-### exercise_muscles
+## Historical deletion policy
 
-- `exercise_id TEXT NOT NULL`
-- `muscle_id TEXT NOT NULL`
-- `role TEXT NOT NULL` (`PRIMARY` / `SECONDARY` initially)
-- optional contribution/weight field only if later analytics genuinely require it
-- composite primary key (`exercise_id`, `muscle_id`)
+The public repositories expose archive operations for Exercise and Routine, not destructive deletion. This is the normal product path.
 
-Indexes:
-- `exercise_id`
-- `muscle_id`
+The FK graph provides a second safety layer:
+- deleting a historical Exercise is blocked by `workout_exercise.exerciseId` RESTRICT;
+- deleting a Routine does not erase Workouts because `workout.routineId` is SET_NULL;
+- deleting RoutineExercise configuration only nulls historical `workout_exercise.routineExerciseId`;
+- deleting an explicit Workout may cascade to its own WorkoutExercise/WorkoutSet rows.
 
-### routines
+## Previous-session semantics
 
-- `id TEXT PRIMARY KEY`
-- `name TEXT NOT NULL`
-- `position INTEGER NOT NULL`
-- `notes TEXT NULL`
-- `is_archived INTEGER NOT NULL DEFAULT 0`
-- created/updated timestamps
+`WorkoutDao.previousAnyWorkout`:
+- same Exercise;
+- completed Workout only;
+- before supplied start timestamp;
+- newest start time wins.
 
-Historical routines are archived rather than destructively removed.
+`WorkoutDao.previousSameRoutine` adds the Routine constraint.
 
-### routine_exercises
+`WorkoutRepository.previousWorkout` selects the correct query from `ANY_WORKOUT` / `SAME_ROUTINE`.
 
-- `id TEXT PRIMARY KEY`
-- `routine_id TEXT NOT NULL`
-- `exercise_id TEXT NOT NULL`
-- `position INTEGER NOT NULL`
-- `target_set_count INTEGER NOT NULL`
-- `rep_min INTEGER NOT NULL`
-- `rep_max INTEGER NOT NULL`
-- `target_rir_tenths INTEGER NULL`
-- `rest_seconds INTEGER NOT NULL`
-- `load_increment_grams INTEGER NOT NULL`
-- `previous_reference_mode TEXT NOT NULL` (`ANY_WORKOUT` / `SAME_ROUTINE`)
+## Observable/query boundaries
 
-Indexes:
-- (`routine_id`, `position`)
-- `exercise_id`
+- Writes and point reads: `suspend` DAO functions.
+- Observable collections/history: `Flow`.
+- UI/composables must not call Room directly; repositories are the boundary for future ViewModels.
 
-Constraints/checks in domain validation:
-- `rep_min > 0`
-- `rep_max >= rep_min`
-- `target_set_count > 0`
-- `rest_seconds >= 0`
-- `load_increment_grams > 0`
-- RIR null or non-negative
+## Test contract
 
-### workouts
+Instrumented tests cover:
+- exercise + muscle relation round trip;
+- routine configuration;
+- complete workout/set persistence;
+- exact `42500 g` representation for 42.5 kg;
+- exact `15` representation for 1.5 RIR;
+- stable set ordering;
+- chronological exercise history;
+- `ANY_WORKOUT` vs `SAME_ROUTINE` resolution;
+- archiving Exercise/Routine without losing completed workout rows.
 
-- `id TEXT PRIMARY KEY`
-- `routine_id TEXT NULL`
-- `title TEXT NOT NULL`
-- `started_at INTEGER NOT NULL`
-- `finished_at INTEGER NULL`
-- `notes TEXT NULL`
+`GymTrackerMigrationFoundationTest` uses Room 3.0.1 `MigrationTestHelper` and the exported schema as the baseline for future schema-version migrations.
 
-Indexes:
-- `started_at`
-- `routine_id`
+## Room stack
 
-A workout may exist without a routine.
+- Room 3.0.1 (`androidx.room3`)
+- KSP 2.3.10
+- sqlite-bundled 2.7.0 / `BundledSQLiteDriver`
+- coroutines 1.11.0
+- schema directory: `app/schemas`
 
-### workout_exercises
-
-- `id TEXT PRIMARY KEY`
-- `workout_id TEXT NOT NULL`
-- `exercise_id TEXT NOT NULL`
-- `routine_exercise_id TEXT NULL`
-- `position INTEGER NOT NULL`
-- `notes TEXT NULL`
-
-Indexes:
-- (`workout_id`, `position`)
-- (`exercise_id`, `workout_id`)
-- `routine_exercise_id`
-
-`routine_exercise_id` captures the routine context used at workout time while `exercise_id` remains the exercise identity.
-
-### workout_sets
-
-- `id TEXT PRIMARY KEY`
-- `workout_exercise_id TEXT NOT NULL`
-- `position INTEGER NOT NULL`
-- `type TEXT NOT NULL` (`WARMUP`, `WORK`, `DROP`, `FAILURE`)
-- `load_grams INTEGER NOT NULL`
-- `reps INTEGER NOT NULL`
-- `rir_tenths INTEGER NULL`
-- `completed_at INTEGER NULL`
-
-Indexes:
-- (`workout_exercise_id`, `position`)
-- `completed_at` only if query plans justify it
-
-Domain validation:
-- `load_grams >= 0`
-- `reps >= 0`
-- RIR null or non-negative
-
-## “Previous” query semantics
-
-The active logger must not ambiguously mix routine defaults with workout history.
-
-### ANY_WORKOUT
-Find the latest completed `workout_exercise` for the same `exercise_id`, excluding the current workout, ordered by workout/session time descending.
-
-### SAME_ROUTINE
-Find the latest completed comparable occurrence for the same exercise under the same routine context. Prefer matching the stable routine/routine-exercise context when possible.
-
-The UI must label which mode is active.
-
-## Deletion / foreign-key policy
-
-Completed workout history takes precedence over cleanup convenience.
-
-- Deleting/archiving an Exercise must never cascade into `workout_exercises` or `workout_sets`.
-- Deleting/archiving a Routine must never delete workouts already performed from it.
-- Routine configuration rows can be removed only when safe; historical workout rows preserve the workout-time references/values needed for interpretation.
-- Prefer `RESTRICT`/`NO ACTION` semantics where cascade could destroy history.
-
-Exact Room foreign-key actions must be validated with database tests before PR 2 is marked complete.
-
-## Derived data
-
-Do **not** persist these as the sole source of truth:
-- total volume
-- e1RM
-- PR flags
-- plateau state
-- progression recommendation
-- weekly muscle-set totals
-
-Compute them from raw history. If caching is introduced later for performance, cache must be disposable/rebuildable.
-
-## Room 3.0.1 implementation requirements
-
-- Use `androidx.room3` APIs.
-- KSP/coroutines integration.
-- Export schemas into a version-controlled directory.
-- Add migration-test foundation at schema v1.
-- Primary database tests should use a supported Room testing strategy; do not make Robolectric the database correctness gate.
-- Keep repositories between UI/ViewModel and DAOs.
-- DAO read streams use `Flow` where observation is useful; writes use suspend functions/transactions.
-
-## PR 2 acceptance examples
-
-Tests should prove at minimum:
-1. an exercise/routine graph can be written and read back losslessly;
-2. a workout with multiple exercises/sets survives database reopen;
-3. archiving an exercise does not erase historical workout sets;
-4. deleting/changing a routine cannot erase completed workouts;
-5. previous-session queries distinguish `ANY_WORKOUT` from `SAME_ROUTINE`;
-6. 42.5 kg round-trips exactly as 42,500 grams;
-7. 1.5 RIR round-trips exactly as integer tenths;
-8. exported Room schema is generated and committed;
-9. the migration-test harness can validate schema v1 as the baseline for future migrations.
+Do not enable destructive migration as a normal upgrade strategy. Every schema version after v1 must add and test a migration path.

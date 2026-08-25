@@ -249,6 +249,40 @@ interface WorkoutDao {
         sets.forEach { upsertSet(it) }
     }
 
+    @Transaction
+    suspend fun appendSetIfActive(candidate: WorkoutSetEntity): WorkoutSetEntity? {
+        val workoutExercise = getWorkoutExercise(candidate.workoutExerciseId) ?: return null
+        val workout = getWorkout(workoutExercise.workoutId) ?: return null
+        if (workout.finishedAt != null) return null
+        val positioned = candidate.copy(
+            position = (getSets(candidate.workoutExerciseId).maxOfOrNull { it.position } ?: -1) + 1,
+        )
+        upsertSet(positioned)
+        return positioned
+    }
+
+    @Transaction
+    suspend fun appendWorkoutExerciseIfActive(
+        candidate: WorkoutExerciseEntity,
+        sets: List<WorkoutSetEntity>,
+    ): WorkoutExerciseEntity? {
+        val workout = getWorkout(candidate.workoutId) ?: return null
+        if (workout.finishedAt != null) return null
+        val positioned = candidate.copy(
+            position = (getExercises(candidate.workoutId).maxOfOrNull { it.position } ?: -1) + 1,
+        )
+        upsertExercise(positioned)
+        sets.forEachIndexed { index, set ->
+            upsertSet(
+                set.copy(
+                    workoutExerciseId = positioned.id,
+                    position = index,
+                ),
+            )
+        }
+        return positioned
+    }
+
     @Query("UPDATE workout SET notes = :notes WHERE id = :workoutId AND finishedAt IS NULL")
     suspend fun updateWorkoutNotes(workoutId: String, notes: String?)
 

@@ -130,8 +130,9 @@ There must not be a second contradictory previous-session engine in the history 
 - Room 3 integration: `androidx.room3:room3-paging:3.0.1` plus `PagingSourceDaoReturnTypeConverter`.
 - UI uses `LazyColumn`, stable set IDs as keys and paged loading.
 - No artificial history retention/window is introduced.
-- PR computation is deterministic O(N) over eligible facts, not O(N²); raw list composition remains paged.
-- Schema v2 is retained. PR5 does not add persistent PR columns or schema v3 solely for convenience.
+- Raw list composition is paged and bounded in memory. PR calculation intentionally reads the exercise's eligible fact history because historical PR events and current bests require the full chronology; the deterministic domain engine sorts once and then performs bounded passes, giving **O(N log N)** worst-case time rather than O(N²).
+- Large synthetic histories are covered by JVM and instrumented Paging tests.
+- Schema v2 is retained. Existing foreign-key/order indexes are reused; PR5 does not add persistent PR columns or schema v3 solely for convenience.
 
 ## Navigation / UX
 

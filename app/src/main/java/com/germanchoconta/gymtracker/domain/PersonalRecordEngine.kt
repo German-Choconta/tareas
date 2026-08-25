@@ -125,7 +125,8 @@ object PersonalRecordEngine {
             if (!isEligibleForRecords(fact)) return@forEach
 
             val load = BigInteger.valueOf(fact.loadGrams)
-            if (heaviest == null || load > heaviest!!.value) {
+            val previousHeaviest = heaviest
+            if (previousHeaviest == null || load > previousHeaviest.value) {
                 heaviest = SetRecord(fact, load)
                 events += PersonalRecordEvent(
                     kind = PersonalRecordKind.HEAVIEST_LOAD,
@@ -149,7 +150,8 @@ object PersonalRecordEngine {
             }
 
             estimatedOneRepMax(fact)?.let { estimate ->
-                if (e1rm == null || estimate.numerator > e1rm!!.value) {
+                val previousE1rm = e1rm
+                if (previousE1rm == null || estimate.numerator > previousE1rm.value) {
                     e1rm = SetRecord(fact, estimate.numerator)
                     events += PersonalRecordEvent(
                         kind = PersonalRecordKind.ESTIMATED_ONE_REP_MAX,
@@ -171,7 +173,8 @@ object PersonalRecordEngine {
         sessionVolumes.values
             .sortedWith(compareBy<MutableSessionVolume>({ it.startedAt }, { it.workoutId }))
             .forEach { session ->
-                if (highestVolume == null || session.volume > highestVolume!!.volumeGramReps) {
+                val previousHighestVolume = highestVolume
+                if (previousHighestVolume == null || session.volume > previousHighestVolume.volumeGramReps) {
                     highestVolume = SessionVolumeRecord(
                         workoutId = session.workoutId,
                         startedAt = session.startedAt,

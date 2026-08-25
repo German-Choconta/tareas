@@ -247,11 +247,11 @@ object PersonalRecordEngine {
             .multiply(BigInteger.valueOf(incrementGrams))
         val half = bucketDenominator.divide(BigInteger.valueOf(2L))
         val buckets = numerator.add(half).divide(bucketDenominator)
-        return try {
-            buckets.multiply(BigInteger.valueOf(incrementGrams)).longValueExact()
-        } catch (_: ArithmeticException) {
-            null
+        val rounded = buckets.multiply(BigInteger.valueOf(incrementGrams))
+        if (rounded < BigInteger.valueOf(Long.MIN_VALUE) || rounded > BigInteger.valueOf(Long.MAX_VALUE)) {
+            return null
         }
+        return rounded.toLong()
     }
 
     private data class MutableSessionVolume(

@@ -26,7 +26,7 @@ import java.time.format.DateTimeFormatter
 internal fun HistoryRecordSummary(records: ExercisePersonalRecords, loading: Boolean) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Records", style = MaterialTheme.typography.titleMedium)
+            Text("Records actuales", style = MaterialTheme.typography.titleMedium)
             if (loading) {
                 Text("Calculando desde los sets guardados…")
             } else {
@@ -39,7 +39,8 @@ internal fun HistoryRecordSummary(records: ExercisePersonalRecords, loading: Boo
                 HistoryMetricLine("Estimated 1RM / e1RM", e1rm?.let(::formatHistoryKg) ?: "—")
                 HistoryMetricLine("Mayor volumen de sesión", volume?.let(::formatHistoryVolume) ?: "—")
                 Text(
-                    "e1RM usa Epley solo entre 2–10 reps y no usa RIR. Es una estimación, no un 1RM medido. " +
+                    "Los records de reps por carga exacta se marcan en su set testigo. " +
+                        "e1RM usa Epley solo entre 2–10 reps y no usa RIR: es una estimación, no un 1RM medido. " +
                         "El volumen es descriptivo y no significa automáticamente un mejor entrenamiento.",
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -52,7 +53,7 @@ internal fun HistoryRecordSummary(records: ExercisePersonalRecords, loading: Boo
 internal fun HistoryPreviousComparison(comparison: PreviousSessionComparison?) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Sesión anterior", style = MaterialTheme.typography.titleMedium)
+            Text("Comparación con sesión anterior", style = MaterialTheme.typography.titleMedium)
             if (comparison == null) {
                 Text("Se necesitan sesiones terminadas con sets elegibles para comparar.")
             } else {
@@ -86,9 +87,12 @@ internal fun HistorySessionHeader(item: HistoryListItem.SessionHeader) {
                 Text(item.title, style = MaterialTheme.typography.titleMedium)
                 Text(formatHistoryDate(item.startedAt), style = MaterialTheme.typography.labelLarge)
             }
+            if (item.isCurrentVolumeBest) {
+                Text("Record actual · mayor volumen de sesión", style = MaterialTheme.typography.labelMedium)
+            }
             if (item.isVolumePrEvent) {
                 Text(
-                    "PR histórico · mayor volumen de sesión hasta ese momento",
+                    "Hito histórico · estableció un nuevo máximo de volumen en ese momento",
                     style = MaterialTheme.typography.labelMedium,
                 )
             }
@@ -113,6 +117,15 @@ internal fun HistoryRawSetRow(item: HistoryListItem.SetItem) {
                     (row.rirTenths?.let { " · RIR ${formatHistoryRir(it)}" } ?: ""),
                 style = MaterialTheme.typography.bodyLarge,
             )
+            item.estimatedOneRepMaxGrams?.let { estimate ->
+                Text(
+                    "Estimated 1RM / e1RM: ${formatHistoryKg(estimate)}",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            item.currentBestKinds.sortedBy { it.ordinal }.forEach { kind ->
+                Text(currentBestExplanation(kind, row.loadGrams), style = MaterialTheme.typography.labelMedium)
+            }
             item.prKinds.sortedBy { it.ordinal }.forEach { kind ->
                 Text(historyPrExplanation(kind, row.loadGrams), style = MaterialTheme.typography.labelMedium)
             }
@@ -128,11 +141,18 @@ private fun HistoryMetricLine(label: String, value: String) {
     }
 }
 
+private fun currentBestExplanation(kind: PersonalRecordKind, loadGrams: Long): String = when (kind) {
+    PersonalRecordKind.HEAVIEST_LOAD -> "Record actual · carga más pesada"
+    PersonalRecordKind.REPS_AT_LOAD -> "Record actual · más reps a exactamente ${formatHistoryKg(loadGrams)}"
+    PersonalRecordKind.ESTIMATED_ONE_REP_MAX -> "Record actual · Estimated 1RM / e1RM más alto"
+    PersonalRecordKind.EXERCISE_SESSION_VOLUME -> "Record actual · volumen de sesión"
+}
+
 private fun historyPrExplanation(kind: PersonalRecordKind, loadGrams: Long): String = when (kind) {
-    PersonalRecordKind.HEAVIEST_LOAD -> "PR histórico · carga más pesada hasta ese momento"
-    PersonalRecordKind.REPS_AT_LOAD -> "PR histórico · más reps a exactamente ${formatHistoryKg(loadGrams)}"
-    PersonalRecordKind.ESTIMATED_ONE_REP_MAX -> "PR histórico · Estimated 1RM más alto hasta ese momento"
-    PersonalRecordKind.EXERCISE_SESSION_VOLUME -> "PR histórico · volumen de sesión"
+    PersonalRecordKind.HEAVIEST_LOAD -> "Hito histórico · nueva carga máxima en ese momento"
+    PersonalRecordKind.REPS_AT_LOAD -> "Hito histórico · nuevas reps máximas a exactamente ${formatHistoryKg(loadGrams)}"
+    PersonalRecordKind.ESTIMATED_ONE_REP_MAX -> "Hito histórico · nuevo Estimated 1RM / e1RM en ese momento"
+    PersonalRecordKind.EXERCISE_SESSION_VOLUME -> "Hito histórico · nuevo volumen máximo de sesión"
 }
 
 private val historyDateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy")

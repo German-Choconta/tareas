@@ -55,7 +55,7 @@ class WorkoutLoggerStateTest {
     }
 
     @Test
-    fun meaningfulIncompleteDataIgnoresUntouchedPlannedSets() {
+    fun meaningfulIncompleteDataIgnoresUntouchedPlannedSetsButProtectsAnyTypedDraft() {
         val untouched = WorkoutSetUi(
             id = "synthetic-set-a",
             position = 0,
@@ -87,11 +87,15 @@ class WorkoutLoggerStateTest {
         )
 
         assertFalse(hasMeaningfulIncompleteData(base))
-        val edited = base.copy(
-            exercises = base.exercises.map { exercise ->
-                exercise.copy(sets = listOf(untouched.copy(loadText = "20")))
-            },
+
+        fun withSet(set: WorkoutSetUi) = base.copy(
+            exercises = base.exercises.map { exercise -> exercise.copy(sets = listOf(set)) },
         )
-        assertTrue(hasMeaningfulIncompleteData(edited))
+
+        assertTrue(hasMeaningfulIncompleteData(withSet(untouched.copy(loadText = "20"))))
+        assertTrue(hasMeaningfulIncompleteData(withSet(untouched.copy(loadText = "invalid"))))
+        assertTrue(hasMeaningfulIncompleteData(withSet(untouched.copy(repsText = "0"))))
+        assertTrue(hasMeaningfulIncompleteData(withSet(untouched.copy(rirText = "1.5"))))
+        assertTrue(hasMeaningfulIncompleteData(withSet(untouched.copy(type = SetTypes.DROP))))
     }
 }

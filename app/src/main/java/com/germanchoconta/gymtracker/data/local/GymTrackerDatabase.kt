@@ -29,10 +29,19 @@ abstract class GymTrackerDatabase : RoomDatabase() {
     companion object {
         const val DATABASE_NAME = "gymtracker.db"
 
+        @Volatile
+        private var instance: GymTrackerDatabase? = null
+
         fun build(context: Context): GymTrackerDatabase =
-            Room.databaseBuilder<GymTrackerDatabase>(context.applicationContext, DATABASE_NAME)
-                .setDriver(BundledSQLiteDriver())
-                .build()
+            instance ?: synchronized(this) {
+                instance ?: Room.databaseBuilder<GymTrackerDatabase>(
+                    context.applicationContext,
+                    DATABASE_NAME,
+                )
+                    .setDriver(BundledSQLiteDriver())
+                    .build()
+                    .also { instance = it }
+            }
     }
 }
 

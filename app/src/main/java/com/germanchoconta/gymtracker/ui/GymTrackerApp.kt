@@ -30,11 +30,8 @@ import com.germanchoconta.gymtracker.ui.history.HistoryScreen
 import com.germanchoconta.gymtracker.ui.history.HistoryViewModel
 import com.germanchoconta.gymtracker.ui.management.ExerciseEditorScreen
 import com.germanchoconta.gymtracker.ui.management.ExerciseLibraryViewModel
-import com.germanchoconta.gymtracker.ui.management.ManagementDestination
-import com.germanchoconta.gymtracker.ui.management.ManagementHome
 import com.germanchoconta.gymtracker.ui.management.RoutineEditorScreen
 import com.germanchoconta.gymtracker.ui.management.RoutineLibraryViewModel
-import com.germanchoconta.gymtracker.ui.workout.RoutineLaunchHome
 import com.germanchoconta.gymtracker.ui.workout.WorkoutLoggerScreen
 import com.germanchoconta.gymtracker.ui.workout.WorkoutLoggerViewModel
 
@@ -137,38 +134,22 @@ fun GymTrackerApp(
         ) { outerPadding ->
             Box(modifier = Modifier.fillMaxSize().padding(outerPadding)) {
                 when (appDestination) {
-                    AppDestination.HISTORY -> HistoryScreen(
-                        state = historyState,
-                        viewModel = historyViewModel,
-                        onBackToApp = { appDestinationName = AppDestination.EXERCISES.name },
+                    AppDestination.EXERCISES -> ExerciseTopLevelScreen(
+                        state = exerciseState,
+                        onQueryChange = exerciseViewModel::updateQuery,
+                        onCreateExercise = exerciseViewModel::startCreate,
+                        onEditExercise = exerciseViewModel::startEdit,
                     )
-                    AppDestination.ROUTINES -> RoutineLaunchHome(
+                    AppDestination.ROUTINES -> RoutineTopLevelScreen(
                         state = routineState,
-                        onDestinationChange = { destination ->
-                            appDestinationName = when (destination) {
-                                ManagementDestination.EXERCISES -> AppDestination.EXERCISES.name
-                                ManagementDestination.ROUTINES -> AppDestination.ROUTINES.name
-                            }
-                        },
                         onCreateRoutine = routineViewModel::startCreate,
                         onEditRoutine = routineViewModel::startEdit,
                         onStartRoutine = workoutViewModel::startRoutine,
                     )
-                    AppDestination.EXERCISES -> ManagementHome(
-                        destination = ManagementDestination.EXERCISES,
-                        onDestinationChange = { destination ->
-                            appDestinationName = when (destination) {
-                                ManagementDestination.EXERCISES -> AppDestination.EXERCISES.name
-                                ManagementDestination.ROUTINES -> AppDestination.ROUTINES.name
-                            }
-                        },
-                        exerciseState = exerciseState,
-                        routineState = routineState,
-                        onExerciseQueryChange = exerciseViewModel::updateQuery,
-                        onCreateExercise = exerciseViewModel::startCreate,
-                        onEditExercise = exerciseViewModel::startEdit,
-                        onCreateRoutine = routineViewModel::startCreate,
-                        onEditRoutine = routineViewModel::startEdit,
+                    AppDestination.HISTORY -> HistoryScreen(
+                        state = historyState,
+                        viewModel = historyViewModel,
+                        onBackToApp = { appDestinationName = AppDestination.EXERCISES.name },
                     )
                 }
             }

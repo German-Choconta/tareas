@@ -1,70 +1,56 @@
 # GymTracker — Project Context & Continuity
 
-> Canonical handoff. Read this first in every new GymTracker session, then verify all status directly in GitHub. **GitHub is the source of truth if this file is stale.**
-> Last updated: 2026-08-24 (America/Bogota), after PR4 merge and post-merge verification.
+> Canonical handoff. Read this first in every new GymTracker session, then verify everything directly in GitHub. **GitHub is the source of truth if this file is stale.**
+> Last updated: 2026-08-25 (America/Bogota), during PR5 finalization.
 
-## 0. Repository, safety, and permanent product direction
+## 0. Repository, safety, and permanent direction
 
 - Repository: `German-Choconta/tareas`.
-- Repository is **public**.
+- Repository is public.
 - GymTracker only. **Never touch `Pulso` / `pulso-finanzas`.**
-- Never commit real workout data, health data, credentials, tokens, secrets, private exports, or personally identifying fixtures. Tests/examples must be synthetic and non-identifying.
+- Never commit real workout data, health data, credentials, tokens, secrets, private exports, or identifying fixtures. Tests/examples must be synthetic and non-identifying.
 - Product loop: **LOG → COMPARE → UNDERSTAND → PROGRESS**.
 - Workout logger principle: **PREVIOUS + TARGET + TODAY**.
-- Android-first, offline/local-first, account-free and cloud-free for the current roadmap.
-- `WorkoutSet` is canonical truth. PRs, e1RM, volume, trends and progression are derived/recalculable unless a future stage proves persistence is necessary.
-- The user has authorized autonomous GitHub work and squash-merge for GymTracker stages after acceptance criteria are met.
+- Android-first, offline/local-first, no accounts/cloud in the current V1 roadmap.
+- `WorkoutSet` is canonical truth. PRs, e1RM, volume, trends, comparisons and progression are derived/recalculable unless a future stage proves persistence is necessary.
+- Work autonomously in GitHub, but do not advance stages silently. Do not start the next PR until the user explicitly continues.
 
-## 1. Completed stages and real GitHub closure
+## 1. Completed stages before PR5
 
 ### PR #1 — Android foundation
-
-- **MERGED**.
+- MERGED.
 
 ### PR #11 / Issue #2 — Room local data foundation
-
-- **MERGED / COMPLETED**.
+- MERGED / COMPLETED.
 - Squash merge: `aceaadbcb4a3ea370439556780b3b674e0505350`.
-- Final PR2 Android CI: `32801537677` — **SUCCESS**.
+- Final PR2 Android CI: `32801537677` — SUCCESS.
 
 ### PR #12 / Issue #3 — Exercises and Routine Editor
-
-- **MERGED / COMPLETED**.
+- MERGED / COMPLETED.
 - Squash merge: `4915ee7ef0dda4a1bc4b01076bec3ddbba0d5e33`.
-- Issue #3: **closed / completed**.
-- Post-merge `main` CI: `32805215489` — **SUCCESS**.
-- Post-merge artifacts:
-  - `gymtracker-debug-apk` — artifact `9547977558`.
-  - `gymtracker-room-schema` — artifact `9547920496`.
+- Issue #3: closed / completed.
+- Post-merge main CI: `32805215489` — SUCCESS.
 
 ### PR #13 / Issue #4 — Workout Logger
-
-- **MERGED / COMPLETED**.
-- PR title: `GymTracker PR 4: Workout logger`.
+- MERGED / COMPLETED.
 - Final PR head: `1e68e65a3bec4392583c942da738989384fb451b`.
-- Final PR CI: `32810018092` — **SUCCESS**.
-- Final PR artifacts:
-  - `gymtracker-debug-apk` — artifact `9549548586`.
-  - `gymtracker-room-schema` — artifact `9549496787`.
-- Squash merge commit on `main`: `12ced7e9f7838d004e2ac4cac17a23f5fa2a8529`.
-- Issue #4: **closed / completed**.
-- Post-merge `main` CI on that squash: `32810354122` — **SUCCESS**.
-- Post-merge artifacts:
-  - `gymtracker-debug-apk` — artifact `9549663102`.
-  - `gymtracker-room-schema` — artifact `9549603797`.
-- All substantive CI steps passed post-merge: JVM tests, schema verification, Room/migration instrumentation, lint, debug APK assembly and both artifact uploads.
-- No unresolved PR review threads or review submissions blocked merge.
-
-> This file update itself is documentation-only and occurs after the verified PR4 squash. If it creates a newer `main` head/run, verify that newer run in GitHub at the start of the next session; it does not change the PR4 application/schema implementation.
+- Final PR CI: `32810018092` — SUCCESS.
+- Squash merge: `12ced7e9f7838d004e2ac4cac17a23f5fa2a8529`.
+- Issue #4: closed / completed.
+- Post-merge main CI: `32810354122` — SUCCESS.
+- Documentation-only main commit after PR4: `6bb28c9bb7d0bb1b530a21e573089be34e1efff7`.
+- CI for that doc head: `32810766155` — SUCCESS.
+- Artifacts from that known-good main run:
+  - `gymtracker-debug-apk` — `9549764881`.
+  - `gymtracker-room-schema` — `9549721821`.
 
 ## 2. Android/toolchain baseline
 
-- Native Android / Kotlin.
-- Jetpack Compose + Material 3.
+- Native Android / Kotlin / Jetpack Compose / Material 3.
 - Package: `com.germanchoconta.gymtracker`.
 - Android Gradle Plugin: `9.3.0`.
 - Kotlin Compose plugin: `2.3.21`.
-- Gradle in CI: `9.5.0`.
+- Gradle CI: `9.5.0`.
 - JDK: `17`.
 - compileSdk: `37`.
 - targetSdk: `36`.
@@ -73,36 +59,32 @@
 - Activity Compose: `1.13.0`.
 - Lifecycle runtime/viewmodel Compose: `2.11.0`.
 - Room: `androidx.room3:room3-runtime:3.0.1`.
-- Room Gradle/compiler: `3.0.1`.
+- Room compiler/Gradle plugin: `3.0.1`.
 - KSP: `2.3.10`.
 - SQLite: `androidx.sqlite:sqlite-bundled:2.7.0` with `BundledSQLiteDriver`.
 - Room testing: `androidx.room3:room3-testing:3.0.1`.
+- PR5 adds Paging `3.5.1` (`paging-runtime`, `paging-compose`) and `androidx.room3:room3-paging:3.0.1`.
 
 Architecture rules:
+- unidirectional data flow and immutable UI state;
+- ViewModels/state holders own screen state;
+- Composables never query Room directly;
+- repositories/DAOs are the persistence boundary;
+- Room owns canonical active/completed workout state;
+- SavedState/rememberSaveable are for UI/navigation hints, not canonical workout facts;
+- DB is an application/process singleton.
 
-- Unidirectional data flow and immutable UI state.
-- Feature ViewModels/state holders own screen state.
-- Composables do not access Room directly.
-- Repositories/DAOs are the persistence boundary.
-- Room is canonical for active/completed workout state.
-- Saveable/SavedStateHandle-style state is only for small UI/navigation hints, never canonical workout history.
-- `GymTrackerDatabase.build(applicationContext)` is process/application singleton and must not be closed by `MainActivity.onDestroy`.
+## 3. Room schema and historical integrity
 
-## 3. Room schema after PR4
-
-### Version and hashes
-
-- Current DB version: **2**.
+### Current schema
+- DB version: **2**.
 - Schema v1 remains committed.
 - v1 identity hash: `4419e2711112b42bfbfa3083e3499613`.
 - v2 identity hash: `251aab4f3ed2b0175df34e37323e31cb`.
-- v2 schema path: `app/schemas/com.germanchoconta.gymtracker.data.local.GymTrackerDatabase/2.json`.
-- Runtime registers `MIGRATION_1_2`.
-- Migration is additive and preserves legacy v1 workout data without inventing target snapshot values for history that never contained them.
-- Migration tests create a DB from committed v1 schema, write synthetic data, migrate to v2, validate schema and verify history preservation.
+- `MIGRATION_1_2` remains registered and tested.
+- PR5 intentionally does **not** create schema v3 and does not persist PR/e1RM/volume badges or summaries.
 
-### Entities
-
+Entities:
 1. `ExerciseEntity`
 2. `MuscleEntity`
 3. `ExerciseMuscleEntity`
@@ -112,252 +94,337 @@ Architecture rules:
 7. `WorkoutExerciseEntity`
 8. `WorkoutSetEntity`
 
-### Numeric and identity invariants
+Numeric invariants:
+- stable `String`/UUID IDs;
+- load truth is `Long` grams (`42.5 kg = 42500`);
+- RIR truth is nullable `Int` tenths (`1.5 = 15`);
+- timestamps are `Long`;
+- no `Double` is canonical persistence truth.
 
-- Stable `String` / UUID-compatible IDs; no autoincrement IDs.
-- Load truth: integer grams in `Long`; `42.5 kg = 42500`.
-- RIR truth: integer tenths in `Int?`; `1.5 RIR = 15`.
-- Timestamps: `Long`.
-- Set types: `WARMUP`, `WORK`, `DROP`, `FAILURE`.
-- Previous reference modes: `ANY_WORKOUT`, `SAME_ROUTINE`.
-
-### Historical integrity
-
-- Exercise → historical workout refs: `RESTRICT`; archive is normal flow.
+Historical integrity:
+- Exercise → workout history: `RESTRICT`; archive is normal flow.
 - Routine → Workout: `SET_NULL`.
 - RoutineExercise → WorkoutExercise: `SET_NULL`.
-- Routine template edits/removals never mutate completed or already-started workout truth.
 - Workout → WorkoutExercise and WorkoutExercise → WorkoutSet cascade only inside the workout aggregate.
+- routine edits/removals never rewrite already-started/completed workout history.
 
-## 4. PR3 management foundation still in force
+Existing v2 indices relevant to PR5 include:
+- `index_workout_startedAt`;
+- `index_workout_exercise_exerciseId`;
+- `index_workout_exercise_workoutId`;
+- unique `index_workout_exercise_workoutId_position`;
+- `index_workout_set_workoutExerciseId`;
+- unique `index_workout_set_workoutExerciseId_position`.
 
-### Exercises
+## 4. PR4 logger invariants that PR5 must preserve
 
-- Searchable active library.
-- Unlimited custom exercises.
-- Create/edit/archive.
-- Equipment, unilateral flag, master notes.
-- Default rep range, target RIR, rest and load increment.
-- Normalized primary/secondary muscle assignments.
-- Archive preserves historical workouts.
+PR4 implements:
+- start workout transactionally from Routine;
+- immediate Room persistence;
+- TARGET snapshot in `WorkoutExerciseEntity`:
+  - `targetSetCount`
+  - `repMin`
+  - `repMax`
+  - `targetRirTenths`
+  - `restSeconds`
+  - `loadIncrementGrams`
+  - `previousReferenceMode`
+- PREVIOUS modes `ANY_WORKOUT` and `SAME_ROUTINE`;
+- PREVIOUS completed sets matched by set position;
+- load/reps/RIR and `WARMUP`/`WORK`/`DROP`/`FAILURE`;
+- complete/uncomplete;
+- add/remove sets;
+- add/replace exercise safely;
+- workout and workout-exercise notes;
+- absolute-timestamp rest timer;
+- autosave and write-race protection;
+- active workout recovery;
+- Finish behavior and immersive active-workout navigation.
 
-### Routines
+PR5 additionally makes PR4 historical selectors deterministic when timestamps tie:
+- active workout: `startedAt DESC, id DESC`;
+- `ANY_WORKOUT`: `startedAt DESC, workout id DESC, workout-exercise position/id`;
+- `SAME_ROUTINE`: same deterministic tie policy;
+- legacy exercise-history ordering also receives explicit IDs/positions.
 
-- Unlimited create/edit/archive.
-- Add/remove/reorder exercises.
-- `targetSetCount`, `repMin`, `repMax`, `targetRirTenths`, `restSeconds`, `loadIncrementGrams`, `previousReferenceMode`.
-- Reorder/template replacement is transactional and collision-safe.
-- `PrimaryTabRow` remains the related management navigation for Exercises/Routines.
+## 5. PR #14 / Issue #5 — Unlimited History and PR Engine
 
-## 5. PR4 Workout Logger architecture
+### GitHub state at this handoff commit
+- PR: **#14 — GymTracker PR 5: Unlimited history and PR engine**.
+- Branch: `feat/history-pr-engine`.
+- Base: `main` at `6bb28c9bb7d0bb1b530a21e573089be34e1efff7` when last verified.
+- Issue: **#5 — PR 5 — Unlimited history and PR engine**.
+- Issue #5 is still open while PR finalization is in progress; it must close as `completed` only when PR5 is actually merged.
+- PR remains draft until the exact head containing this file passes full CI and final reviews.
+- Implementation head immediately before this documentation commit: `5d6db231af9a4b3a6bc1901737ba3e32cb16c131`.
+- Code-candidate CI on that head: run `32853495781` (#92). Verify its final conclusion in GitHub; at documentation time it had already passed JVM/schema and was progressing through the remaining contract.
+- No PR5 merge has happened yet at the time this text is committed.
 
-### Start from Routine and TARGET snapshot
+### Scope implemented
+- unlimited local raw history by exercise;
+- Room + Paging 3 lazy retrieval;
+- deterministic heaviest-load PR;
+- deterministic highest-reps-at-exact-load PR;
+- Estimated 1RM/e1RM PR and per-set estimate where eligible;
+- meaningful exercise-session volume PR;
+- historical PR events vs current best distinction;
+- previous-session comparison;
+- archived-exercise history;
+- routine-deletion-safe history;
+- deterministic timestamp ties;
+- large synthetic history tests;
+- History top-level destination with state restoration.
 
-Starting a workout is immediate and transactional:
+No PR6 dashboards/charts, cloud sync, accounts, login, Health Connect, Wear OS, ads, analytics SDK, AI coaching, final progression engine, backup/restore or CSV are part of PR5.
 
-1. Resolve active Routine + ordered RoutineExercise rows.
-2. Insert `WorkoutEntity` immediately.
-3. Insert ordered `WorkoutExerciseEntity` rows with copied target snapshot.
-4. Pre-create target `WorkoutSetEntity` rows with stable IDs.
+## 6. PR5 raw history architecture
 
-PR4 required schema v2 because v1 could not hold a stable TARGET independently of later Routine edits.
+Persistence/query/UI are separated:
+- `HistoryDao`: raw joins and deterministic ordering;
+- `HistoryRepository`: Paging/fact boundary;
+- `PersonalRecordEngine`: pure deterministic domain calculations;
+- `HistoryViewModel`: combines selected exercise, metrics and paged raw rows;
+- Compose renders only state/paging output.
 
-`WorkoutExerciseEntity` snapshot fields:
+Raw history rules:
+- history UI only exposes workouts with `finishedAt != null`;
+- every stored set row in those sessions remains visible, including an incomplete planned/draft row;
+- active workouts are never definitive historical PR evidence;
+- archived exercises with finished sessions remain discoverable/readable;
+- deleted Routine does not break history because `Workout.title` is the session snapshot/context and `routineId` may be null;
+- old v1 historical rows remain valid even without TARGET snapshot because PR5 derives from workout/set facts rather than current Routine targets.
 
-- `targetSetCount`
-- `repMin`
-- `repMax`
-- `targetRirTenths`
-- `restSeconds`
-- `loadIncrementGrams`
-- `previousReferenceMode`
+Deterministic raw order:
+`workout.startedAt DESC → workout.id DESC → workoutExercise.position ASC → workoutExercise.id ASC → set.position ASC → set.id ASC`.
 
-A started/completed workout therefore remains historically stable even if the Routine is later edited, reordered or removed.
+Paging:
+- page size `30`;
+- initial load `30`;
+- prefetch distance `10`;
+- placeholders disabled;
+- in-memory Paging max size `150`;
+- DB retains all history and older pages remain reloadable; no 30/90-day or N-session retention window exists.
 
-### PREVIOUS
+The full eligible fact list for one exercise is intentionally read when calculating historical PR events/current best because these require full chronology. Domain processing sorts once and then uses bounded passes: worst-case **O(N log N)**, not O(N²). JVM coverage includes 50,000 synthetic facts; instrumented Paging coverage includes 240 synthetic workouts with bounded page loads.
 
-- `ANY_WORKOUT`: latest **finished** workout before current `startedAt` containing that exercise.
-- `SAME_ROUTINE`: latest **finished** workout before current `startedAt` with same routine + exercise.
-- Current unfinished workout can never be its own previous reference.
-- Previous **completed** sets are matched to Today sets by position.
-- Different previous/current set counts are valid; unmatched Today sets simply have no previous row.
-- Previous exposes useful load/reps/RIR/type context.
+## 7. PR eligibility and deterministic ties
 
-### TARGET
+A set participates in PR calculations only if all are true:
+1. parent workout is finished;
+2. `completedAt != null`;
+3. `reps > 0`;
+4. `loadGrams > 0`;
+5. type is `WORK`, `DROP`, or `FAILURE`.
 
-- Stable copied template target for the workout.
-- Includes sets, rep range, RIR, rest, load increment and previous-reference mode.
-- Designed so a future deterministic progression layer can evolve target generation without corrupting workout history.
+`WARMUP` stays visible in raw history but is excluded from PR/e1RM/volume records.
 
-### TODAY
+RIR:
+- may be null;
+- is displayed when available;
+- is deliberately **not** used by the PR5 e1RM formula.
 
-Each set supports:
+Unilateral exercises:
+- use the exact recorded `loadGrams`;
+- PR5 does not double/reinterpret load because body-side semantics are not persisted.
 
-- load,
-- reps,
-- RIR,
-- set type,
-- complete/uncomplete.
+PR chronology:
+`startedAt ASC → workoutId ASC → workoutExercise.position ASC → workoutExerciseId ASC → set.position ASC → setId ASC`.
 
-Fast-entry UX:
+Tie policy:
+- records require **strict improvement**;
+- equal values are ties/matches, not new PR events;
+- multiple strict improvements within the same workout can each be historical events;
+- first deterministic witness of the ultimate value remains the current-best witness; later ties do not replace it.
 
-- decimal numeric load input → exact grams,
-- integer reps input,
-- decimal RIR input → exact tenths,
-- IME flow: load `Next` → reps `Next` → RIR `Done`,
-- no fragile horizontal PREVIOUS/TARGET/TODAY table,
-- stable list keys,
-- minimum Material/Compose interaction targets,
-- TODAY has strongest input priority while PREVIOUS/TARGET remain adjacent and immediately readable.
+## 8. Exact PR definitions
 
-### Set and exercise mutation safety
+### Heaviest Load
+- exact integer grams;
+- `newLoad > previousBestLoad` creates a historical event;
+- equality is not a new event.
 
-- Complete/uncomplete persists immediately.
-- Completion requires meaningful valid reps.
-- Add-set append is transactional with unique position; rapid concurrent taps are tested.
-- Removing completed sets requires explicit destructive confirmation at the UX boundary.
-- Position compaction uses temporary negative positions to avoid unique-index collisions.
-- Set reordering is intentionally not included in PR4.
-- Exercises can be added during an active workout without changing the Routine.
-- Added exercise defaults come from Exercise defaults/fallbacks.
-- Exercise append is transactional under rapid taps.
-- Exercise replacement is blocked when completed sets exist; safer flow is to add a replacement exercise instead of silently destroying completed data.
+### Highest Reps at Exact Load
+- map key is exact `loadGrams`;
+- no buckets or silent load rounding;
+- `100000 g` and `100001 g` are separate records;
+- reps must strictly exceed the prior best for that exact gram value;
+- equality is not a new event.
 
-## 6. Timer, notes, autosave and recovery
+### Estimated 1RM / e1RM
+Formula chosen for PR5: Epley
 
-### Rest timer
+`e1RM = load × (1 + reps / 30)`
 
-- `WorkoutEntity` persists `restTimerEndsAt` and `restTimerWorkoutExerciseId`.
-- Timer truth is an absolute end timestamp, not an incrementing counter.
-- Remaining time is derived from `endsAt - now`, so recomposition/background does not desynchronize it.
-- Timer reconstructs from Room after Activity/ViewModel recreation.
-- Finish clears timer recovery state.
-- No unnecessary foreground service/background complexity was added.
+Rules:
+- only 2–10 reps are eligible for e1RM;
+- RIR is not used;
+- exact comparison uses rational numerator `loadGrams × (30 + reps)` over constant denominator 30;
+- domain arithmetic uses integer/`BigInteger`, not floating canonical truth;
+- display rounds half-up to nearest 100 g / 0.1 kg;
+- always label `Estimated 1RM / e1RM`, never real/measured 1RM;
+- sets outside 2–10 reps can still count for other PR types.
 
-### Notes
+Limitations documented in `docs/PR5_HISTORY_PR_SPEC.md`:
+- repetition equations are population/exercise dependent;
+- prediction error grows with higher repetition counts;
+- a non-failure set may underestimate true maximal capacity;
+- RIR adjustment is intentionally deferred rather than inventing a mixed model.
 
-- Workout notes → `WorkoutEntity.notes`.
-- Workout-exercise notes → `WorkoutExerciseEntity.notes`.
-- Master `ExerciseEntity.notes` is never overwritten by workout notes.
-- Notes use a short autosave debounce.
-- Finish flushes pending note writes before `finishedAt` so “type → Finish” does not lose notes.
+Primary/technical literature recorded in the spec:
+- Reynolds JM, Gordon TJ, Robergs RA, J Strength Cond Res 2006, PMID 16937972;
+- Mayhew JL et al., J Strength Cond Res 2008, PMID 18714230;
+- Mayhew JL et al., J Sports Med Phys Fitness 2002, PMID 12094120.
 
-### Set autosave
+### Volume
+Only **exercise-session volume** is treated as a PR metric:
+- sum of `loadGrams × reps` across PR-eligible sets for that exercise in one finished workout;
+- multiple occurrences of the same exercise in the same workout are combined;
+- `BigInteger` prevents overflow;
+- strict improvement creates the historical volume event;
+- UI calls it descriptive volume, never a universal quality/better-workout score;
+- set-volume and whole-workout-volume badges are intentionally omitted.
 
-- Fast set entry uses per-field writes instead of whole-row writes.
-- Latest writes for the same field are cancelable/serialized to prevent older writes landing after newer ones.
-- Pending set autosaves are flushed before completion, destructive replacement/removal and Finish where needed.
+## 9. Historical PR event vs current best
 
-### Recovery / process death
+PR5 explicitly separates:
+- **historical event**: a set/session strictly improved the record that existed at that time;
+- **current best**: the highest value after processing the entire eligible history.
 
-- Active workout = latest workout with `finishedAt IS NULL`.
-- Important state is persisted in Room, not only ViewModel memory.
-- On recreation/relaunch, the logger reconstructs workout/exercises/sets/notes/completion/timer from Room.
+The UI uses distinct explanatory text for both concepts rather than one ambiguous badge.
 
-## 7. Navigation and Finish UX after PR4
+## 10. Previous-session comparison
 
-- Exercises/Routines remain the management `PrimaryTabRow`.
-- Active workout is a dedicated transient/immersive screen, not a third permanent tab.
-- Routine rows expose direct Start.
-- Untouched planned incomplete sets do **not** force an unnecessary Finish confirmation.
-- If any incomplete set has user-entered load/reps/RIR text or changed set type, Finish asks for confirmation.
-- Invalid-but-typed text also counts as meaningful draft input so it cannot disappear silently.
-- Incomplete/empty sets are not silently converted to completed sets.
-- After `finishedAt` is set, active-workout mutations are rejected.
+PR5 keeps semantics consistent with PR4:
+- `ANY_WORKOUT`: latest finished earlier workout containing the exercise;
+- `SAME_ROUTINE`: latest finished earlier workout with same routine + exercise;
+- same-start-time ties now have explicit deterministic ordering;
+- PR4 set matching stays position-based.
 
-## 8. PR4 validation coverage
+History’s compact comparison shows the latest two finished eligible exercise sessions and their completed-set count, max load and volume. Active workouts are excluded. Different set counts are valid.
 
-All committed fixtures are synthetic/non-identifying.
+## 11. History UX and state restoration
 
-### JVM/state tests
+Compact-device primary destinations are now:
+- Exercises;
+- Routines;
+- History.
 
-- Exact and invalid load conversion/validation.
-- Reps validation and completion rules.
-- Exact RIR tenths and invalid values.
-- Absolute-deadline timer math.
-- Meaningful incomplete draft detection, including invalid-but-typed text.
-- Untouched planned sets do not count as destructive draft loss.
+A Material 3 `NavigationBar` is used for these three equal-priority destinations. Active workout remains immersive/transient and does not become a fourth persistent destination.
 
-### Instrumented Room/repository tests
+History root:
+- lists exercises with finished history, including archived exercises;
+- stable exercise keys;
+- session count and latest date;
+- no redundant back arrow because History root is top-level.
 
-- Start workout from Routine and immediate persistence.
-- Stable target snapshot and independence from later Routine edits.
-- Previous `ANY_WORKOUT`.
-- Previous `SAME_ROUTINE`.
-- Previous session with different set count.
-- Today load/reps/RIR/type persistence.
-- Complete/uncomplete.
-- Timer end timestamp.
-- Add/remove set and ordered unique positions.
-- Rapid concurrent set append integrity.
-- Add exercise and ordered positions.
-- Rapid concurrent exercise append integrity.
-- Safe exercise replacement.
-- Workout notes and workout-exercise notes.
-- Active-workout recovery.
-- Finish behavior.
-- Historical workout preservation.
-- v1→v2 migration/history preservation.
+Exercise history detail:
+- current record summary;
+- previous-session comparison;
+- raw session headers/context;
+- raw set type/load/reps/RIR/completion state;
+- per-set e1RM only when eligible;
+- historical PR explanations;
+- current-best explanations;
+- raw facts remain visible and are never replaced by summaries.
 
-## 9. Important bugs/risks corrected in PR4
+State:
+- top-level destination uses `rememberSaveable`;
+- `rememberSaveableStateHolder` preserves saveable subtree/list state while switching destinations;
+- selected History exercise is stored in `SavedStateHandle` via `CreationExtras.createSavedStateHandle()`;
+- recreation test verifies selection/metrics restoration and clearing.
 
-1. **v1 could not preserve TARGET snapshot** → justified schema v2 + migration.
-2. **Old CI schema check could miss newly generated untracked schema files** → snapshot committed schemas before build and compare generated file-set + semantic JSON afterward.
-3. **Whole-row autosave could overwrite another field** → per-field persistence.
-4. **Rapid same-field writes could complete out of order** → cancelable/serialized latest-write jobs + flush.
-5. **Note typed immediately before Finish could race `finishedAt`** → flush pending notes first.
-6. **Rapid double-start could create duplicate active workouts** → transactional/guarded start.
-7. **Rapid add-set/add-exercise could contend for unique positions** → transactional append + concurrency tests.
-8. **Finish confirmation was initially too broad and could miss invalid typed draft** → confirmation now depends on any actual nonblank draft/change, not merely incomplete planned rows.
+Interactive rows/buttons use Material minimum interactive component sizing and record meaning is expressed in text, not color alone.
 
-## 10. CI contract
+## 12. PR5 test coverage
+
+All new fixtures are synthetic/non-identifying.
+
+### JVM/domain
+- heaviest-load strict improvements and ties;
+- reps-at-load exact grams and nearby-load separation;
+- multiple PRs inside one session;
+- current-best witness vs historical events;
+- Epley exact calculation;
+- e1RM display rounding;
+- invalid e1RM rep ranges;
+- RIR-independent e1RM behavior;
+- WARMUP/incomplete/zero-load/zero-reps/active-workout exclusions;
+- WORK/DROP/FAILURE inclusion;
+- exercise-session volume;
+- duplicate exercise occurrences within a workout;
+- overflow-safe volume;
+- volume ties;
+- deterministic equal timestamps and reversed input;
+- previous-session comparison with different set count;
+- 50,000-fact synthetic history;
+- History ViewModel SavedStateHandle restoration.
+
+### Instrumented Room/Paging
+- raw history only from finished workouts;
+- incomplete raw rows remain visible;
+- deterministic same-timestamp ordering;
+- archived exercise history;
+- Routine deletion + `SET_NULL` without history loss;
+- fact query exposes active/incomplete facts so domain rejection itself is tested;
+- 240-workout paged history, bounded pages and access beyond first page;
+- PR4 `ANY_WORKOUT` and `SAME_ROUTINE` deterministic ties;
+- existing PR1–PR4 Room/migration suite remains part of CI.
+
+## 13. PR5 bugs/issues corrected during implementation
+
+1. Large-history test initially assumed the last alternating-rep fixture had highest volume → fixture made monotonic so the test measures the intended invariant.
+2. Paging could emit raw rows before PR calculation finished, temporarily omitting annotations → paged stream now depends on `(selectedExerciseId, records)` so it regenerates deterministically after metrics load.
+3. Existing PR4 PREVIOUS queries relied on incomplete tie ordering → explicit workout/exercise tie breakers added without changing semantics.
+4. Instrumented test imported `executeSQL` from the wrong package → corrected to Room 3 `androidx.room3.executeSQL`; subsequent instrumented run passed.
+5. Design spec originally claimed O(N) despite an intentional deterministic sort → corrected to O(N log N).
+6. `BigInteger.TWO` is API 33 while minSdk is 28 → replaced with `BigInteger.valueOf(2L)` in production/test code.
+7. History root initially had redundant back navigation despite being top-level → removed; detail retains back-to-History behavior.
+8. History selection initially did not survive state recreation → moved to `SavedStateHandle` and added recreation test.
+9. Top-level tab replacement risked losing saveable list state → added `rememberSaveableStateHolder`.
+
+## 14. CI contract
 
 Android CI runs on PRs and pushes to `main`:
+1. JDK/Android/Gradle setup;
+2. snapshot committed Room schemas;
+3. JVM tests;
+4. semantic Room schema verification;
+5. upload `gymtracker-room-schema`;
+6. enable KVM;
+7. instrumented Room/database/migration/Paging tests on emulator API 35;
+8. lint;
+9. assemble debug APK;
+10. upload `gymtracker-debug-apk` (14 days).
 
-1. Set up JDK/Android/Gradle.
-2. Snapshot committed Room schemas.
-3. JVM unit tests.
-4. Verify generated schema file-set + semantic contents exactly match committed schemas.
-5. Upload `gymtracker-room-schema`.
-6. Enable KVM.
-7. Instrumented Room/database/migration tests on emulator API 35 / Google APIs / x86_64.
-8. Lint.
-9. Assemble debug APK.
-10. Upload `gymtracker-debug-apk` for 14 days.
+Before PR5 can merge:
+- exact head containing this `PROJECT_CONTEXT.md` must pass every step;
+- both artifacts must exist;
+- PR must be mergeable and review threads resolved;
+- privacy/scope/query/determinism/UX reviews must be complete;
+- then mark ready and squash merge;
+- verify Issue #5 closes as `completed`;
+- verify post-merge main CI + artifacts;
+- update this handoff on main with the actual squash/main CI/artifacts and verify the documentation head’s CI too.
 
-## 11. Roadmap
+## 15. Roadmap
 
-- PR #1 — Android foundation — **MERGED**.
-- PR #2 / Issue #2 — Room local data foundation — **MERGED / COMPLETED**.
-- PR #3 / Issue #3 — Exercises and Routine Editor — **MERGED / COMPLETED**.
-- PR #4 / Issue #4 — Workout Logger — **MERGED / COMPLETED**.
-- PR #5 / Issue #5 — Unlimited History and PR Engine — **NEXT**.
-- PR #6 / Issue #6 — Progress Analytics.
+- PR #1 — Android foundation — MERGED.
+- PR #2 / Issue #2 — Room local data foundation — MERGED / COMPLETED.
+- PR #3 / Issue #3 — Exercises and Routine Editor — MERGED / COMPLETED.
+- PR #4 / Issue #4 — Workout Logger — MERGED / COMPLETED.
+- PR #5 / Issue #5 — Unlimited History and PR Engine — **IMPLEMENTED, FINALIZATION/CI IN PROGRESS AT THIS HANDOFF**.
+- PR #6 / Issue #6 — Progress Analytics — **DO NOT START until PR5 is fully closed and the user explicitly continues**.
 - PR #7 / Issue #7 — Backup, Restore, CSV Export.
 - PR #8 / Issue #8 — V1 UX / reliability hardening.
 - Issue #9 — post-V1 Health Connect recovery context.
 - Issue #10 — post-V1 Wear OS companion.
 
-## 12. PR5 — next-stage guardrails
+## 16. Next action from this handoff
 
-Issue #5 is `PR 5 — Unlimited history and PR engine` and is currently open.
-
-Issue #5 scope from GitHub:
-
-- raw session history,
-- heaviest load PR,
-- highest reps at a given load,
-- estimated 1RM trend/PR with estimates clearly labeled,
-- meaningful volume PRs where applicable,
-- previous-session comparisons.
-
-Constraints from Issue #5:
-
-- never replace raw set history with derived metrics,
-- no artificial history window,
-- PR detection must be deterministic and tested,
-- large histories must remain usable.
-
-Before PR5 implementation, research current official Android/Compose/Material guidance for history/list/detail UX and performance, and research evidence/limitations for e1RM formulas. Define PR semantics explicitly before coding. Keep estimates labeled, do not imply fake precision, treat volume as descriptive rather than a universal performance score, and keep progression/PR logic transparent and explainable.
-
-Do **not** start PR5 until a session explicitly continues after verifying this file against the real GitHub state.
+1. Verify real GitHub state first.
+2. Finish PR #14 only; do not start PR6.
+3. Confirm CI on the exact `PROJECT_CONTEXT.md` head is SUCCESS and both artifacts exist.
+4. Synchronize PR body, mark ready only when closure checks pass, squash merge.
+5. Confirm Issue #5 closed/completed and post-merge main CI/artifacts.
+6. Update this file on main with exact final PR5 head, squash commit, CI IDs and artifact IDs; verify that final documentation head is green.
+7. Only after PR5 is fully closed may the next chat inspect Issue #6 and design PR6, and only when the user explicitly continues.

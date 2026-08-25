@@ -78,6 +78,7 @@ data class WorkoutLoggerUiState(
     val exercises: List<WorkoutExerciseUi> = emptyList(),
     val exerciseChoices: List<WorkoutExerciseChoice> = emptyList(),
     val confirmFinish: Boolean = false,
+    val finishing: Boolean = false,
     val message: String? = null,
 ) {
     val hasActiveWorkout: Boolean get() = activeWorkoutId != null
@@ -295,6 +296,7 @@ class WorkoutLoggerViewModel(
     }
 
     fun requestFinish() {
+        if (_uiState.value.finishing) return
         if (hasMeaningfulIncompleteData(_uiState.value)) {
             _uiState.update { it.copy(confirmFinish = true) }
         } else {
@@ -303,11 +305,15 @@ class WorkoutLoggerViewModel(
     }
 
     fun dismissFinishConfirmation() {
+        if (_uiState.value.finishing) return
         _uiState.update { it.copy(confirmFinish = false) }
     }
 
     fun finishConfirmed() {
-        val workoutId = _uiState.value.activeWorkoutId ?: return
+        val current = _uiState.value
+        val workoutId = current.activeWorkoutId ?: return
+        if (current.finishing) return
+        _uiState.update { it.copy(finishing = true, confirmFinish = false, message = null) }
         viewModelScope.launch {
             // Flush every canonical autosave while the workout is still editable.
             // This protects fast "type → Finish" sequences from racing finishedAt.
@@ -317,6 +323,13 @@ class WorkoutLoggerViewModel(
             if (workoutRepository.finishWorkout(workoutId, now())) {
                 val choices = loadExerciseChoices(emptySet())
                 _uiState.value = WorkoutLoggerUiState(loading = false, exerciseChoices = choices)
+            } else {
+                _uiState.update {
+                    it.copy(
+                        finishing = false,
+                        message = "No se pudo finalizar el entrenamiento. Revisa el estado actual e inténtalo de nuevo.",
+                    )
+                }
             }
         }
     }
@@ -372,8 +385,11 @@ class WorkoutLoggerViewModel(
         }
 
         val workout = aggregate.workout
+        val exercisesById = exerciseRepository
+            .getByIds(aggregate.exercises.map { it.exercise.exerciseId })
+            .associateBy { it.id }
         val exerciseUi = aggregate.exercises.map { item ->
-            val exercise = exerciseRepository.getById(item.exercise.exerciseId)
+            val exercise = exercisesById[item.exercise.exerciseId]
             val referenceMode = item.exercise.previousReferenceMode ?: PreviousReferenceModes.ANY_WORKOUT
             val previousByPosition = workoutRepository.previousCompletedSets(
                 exerciseId = item.exercise.exerciseId,

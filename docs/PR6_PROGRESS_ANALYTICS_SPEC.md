@@ -144,6 +144,8 @@ If sampling is necessary it must:
 
 Correctness takes priority over a hard visual-point cap: if required witnesses exceed the target, witnesses remain.
 
+The visual x-axis preserves relative calendar spacing instead of assigning an equal ordinal gap to every observed session. Same-day points remain distinct in deterministic order. The temporal x transform is presentation-only and normalized to Vico's supported four-decimal precision; exact dates and metric values remain in immutable UI state and the accessible point-detail surface.
+
 ## Chart renderer decision
 
 PR6 uses **Vico 3.2.3** Compose modules (`compose` and `compose-m3`).
@@ -236,7 +238,8 @@ Progress minimum UI:
 - time-zone/day/week/month boundaries;
 - volume overflow;
 - sparse, dense, and long history;
-- deterministic presentation sampling.
+- deterministic presentation sampling;
+- relative temporal chart spacing and same-day deterministic point ordering.
 
 ### Room/instrumented
 
@@ -256,7 +259,8 @@ Progress minimum UI:
 - metric switching;
 - exact-load switching;
 - frequency bucket switching;
-- chart state produced from domain output.
+- chart state produced from domain output;
+- History / Progress tab selection.
 
 All fixtures are synthetic and non-identifying.
 

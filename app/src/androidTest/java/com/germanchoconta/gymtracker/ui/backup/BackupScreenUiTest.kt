@@ -83,7 +83,7 @@ class BackupScreenUiTest {
         assertEquals(0, replaceRequests)
         assertEquals(0, confirmations)
 
-        composeRule.onNodeWithText("Revisar reemplazo").performClick()
+        composeRule.onNodeWithText("Revisar reemplazo").performScrollTo().performClick()
         composeRule.waitForIdle()
 
         assertEquals(1, replaceRequests)

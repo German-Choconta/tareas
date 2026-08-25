@@ -85,12 +85,13 @@ class PersonalRecordEngineTest {
     }
 
     @Test
-    fun warmupIncompleteZeroLoadAndActiveWorkoutFactsDoNotGenerateRecords() {
+    fun warmupIncompleteZeroLoadZeroRepsAndActiveWorkoutFactsDoNotGenerateRecords() {
         val records = PersonalRecordEngine.calculate(
             listOf(
                 fact("warmup", 1_000, 200_000, 10, type = "WARMUP"),
                 fact("incomplete", 2_000, 210_000, 10, completedAt = null),
-                fact("zero", 3_000, 0, 20),
+                fact("zero-load", 3_000, 0, 20),
+                fact("zero-reps", 3_500, 220_000, 0),
                 fact("active", 4_000, 220_000, 10, finishedAt = null),
             ),
         )
@@ -176,7 +177,7 @@ class PersonalRecordEngineTest {
     }
 
     @Test
-    fun largeSyntheticHistoryRemainsLinearAndDeterministic() {
+    fun largeSyntheticHistoryRemainsBoundedAndDeterministic() {
         val facts = List(50_000) { index ->
             fact(
                 setId = "synthetic-set-${index.toString().padStart(5, '0')}",

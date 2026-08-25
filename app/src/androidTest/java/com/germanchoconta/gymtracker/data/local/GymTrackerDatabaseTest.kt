@@ -223,11 +223,16 @@ class GymTrackerDatabaseTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         context.deleteDatabase(GymTrackerDatabase.DATABASE_NAME)
 
-        var fileDb = GymTrackerDatabase.build(context)
+        fun openFileDatabase(): GymTrackerDatabase =
+            Room.databaseBuilder<GymTrackerDatabase>(context, GymTrackerDatabase.DATABASE_NAME)
+                .setDriver(BundledSQLiteDriver())
+                .build()
+
+        var fileDb = openFileDatabase()
         fileDb.exerciseDao().upsert(ExerciseEntity(id = "persisted", name = "Persisted exercise"))
         fileDb.close()
 
-        fileDb = GymTrackerDatabase.build(context)
+        fileDb = openFileDatabase()
         val restored = fileDb.exerciseDao().getById("persisted")
         fileDb.close()
         context.deleteDatabase(GymTrackerDatabase.DATABASE_NAME)

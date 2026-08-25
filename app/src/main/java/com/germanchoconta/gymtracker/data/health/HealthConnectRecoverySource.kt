@@ -48,18 +48,16 @@ class HealthConnectRecoverySource(
             return RawRecoveryRecords()
         }
 
-        val dayStart = day.atStartOfDay(zoneId).toInstant()
-        val nextDayStart = day.plusDays(1).atStartOfDay(zoneId).toInstant()
-        val sleepReadStart = day.minusDays(1).atStartOfDay(zoneId).toInstant()
+        val window = RecoveryReadWindow.forDay(day, zoneId)
 
         val sleepSessions = if (RecoveryPermission.SLEEP in grantedPermissions) {
-            readAll(SleepSessionRecord::class, sleepReadStart, nextDayStart).map(::mapSleep)
+            readAll(SleepSessionRecord::class, window.sleepReadStart, window.nextDayStart).map(::mapSleep)
         } else {
             emptyList()
         }
 
         val restingHeartRates = if (RecoveryPermission.RESTING_HEART_RATE in grantedPermissions) {
-            readAll(RestingHeartRateRecord::class, dayStart, nextDayStart).map {
+            readAll(RestingHeartRateRecord::class, window.dayStart, window.nextDayStart).map {
                 RawRestingHeartRate(
                     sourcePackage = it.metadata.dataOrigin.packageName,
                     time = it.time,
@@ -71,7 +69,7 @@ class HealthConnectRecoverySource(
         }
 
         val hrvRmssd = if (RecoveryPermission.HRV_RMSSD in grantedPermissions) {
-            readAll(HeartRateVariabilityRmssdRecord::class, dayStart, nextDayStart).map {
+            readAll(HeartRateVariabilityRmssdRecord::class, window.dayStart, window.nextDayStart).map {
                 RawHrvRmssd(
                     sourcePackage = it.metadata.dataOrigin.packageName,
                     time = it.time,

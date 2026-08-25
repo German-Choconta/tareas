@@ -45,10 +45,6 @@ class RecoveryContextViewModel internal constructor(
     val uiState: StateFlow<RecoveryUiState> = _uiState.asStateFlow()
     private val refreshMutex = Mutex()
 
-    init {
-        refresh()
-    }
-
     fun refresh() {
         val availability = source.availability()
         if (availability != RecoveryAvailability.AVAILABLE) {

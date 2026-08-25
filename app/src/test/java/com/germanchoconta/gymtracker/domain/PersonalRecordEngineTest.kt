@@ -37,8 +37,8 @@ class PersonalRecordEngineTest {
             ),
         )
 
-        assertEquals(10L, records.repsAtExactLoad.getValue(100_000).value.longValueExact())
-        assertEquals(20L, records.repsAtExactLoad.getValue(100_001).value.longValueExact())
+        assertEquals(10L, records.repsAtExactLoad.getValue(100_000).value.toLong())
+        assertEquals(20L, records.repsAtExactLoad.getValue(100_001).value.toLong())
         assertEquals("100kg-10", records.repsAtExactLoad.getValue(100_000).fact.workoutSetId)
         assertFalse(
             records.events.any {

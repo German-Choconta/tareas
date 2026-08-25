@@ -54,6 +54,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.paging:paging-runtime:3.5.1")
     implementation("androidx.paging:paging-compose:3.5.1")
+    implementation("androidx.health.connect:connect-client:1.1.0")
 
     implementation("com.patrykandpatrick.vico:compose:3.2.3")
     implementation("com.patrykandpatrick.vico:compose-m3:3.2.3")

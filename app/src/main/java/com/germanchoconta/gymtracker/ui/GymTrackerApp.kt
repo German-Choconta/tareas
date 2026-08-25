@@ -23,10 +23,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.germanchoconta.gymtracker.data.backup.BackupDocumentIo
+import com.germanchoconta.gymtracker.data.backup.BackupRepository
 import com.germanchoconta.gymtracker.data.local.ExerciseRepository
 import com.germanchoconta.gymtracker.data.local.HistoryRepository
 import com.germanchoconta.gymtracker.data.local.RoutineRepository
 import com.germanchoconta.gymtracker.data.local.WorkoutRepository
+import com.germanchoconta.gymtracker.ui.backup.BackupScreen
+import com.germanchoconta.gymtracker.ui.backup.BackupViewModel
 import com.germanchoconta.gymtracker.ui.history.HistoryScreen
 import com.germanchoconta.gymtracker.ui.history.HistoryViewModel
 import com.germanchoconta.gymtracker.ui.management.ExerciseEditorScreen
@@ -44,6 +48,9 @@ fun GymTrackerApp(
     routineRepository: RoutineRepository,
     workoutRepository: WorkoutRepository,
     historyRepository: HistoryRepository,
+    backupRepository: BackupRepository,
+    backupDocumentIo: BackupDocumentIo,
+    appVersion: String,
 ) {
     val exerciseViewModel: ExerciseLibraryViewModel = viewModel(
         factory = ExerciseLibraryViewModel.factory(exerciseRepository),
@@ -57,11 +64,16 @@ fun GymTrackerApp(
     val historyViewModel: HistoryViewModel = viewModel(
         factory = HistoryViewModel.factory(historyRepository),
     )
+    val backupViewModel: BackupViewModel = viewModel(
+        factory = BackupViewModel.factory(backupRepository, backupDocumentIo, appVersion),
+    )
     val exerciseState by exerciseViewModel.uiState.collectAsStateWithLifecycle()
     val routineState by routineViewModel.uiState.collectAsStateWithLifecycle()
     val workoutState by workoutViewModel.uiState.collectAsStateWithLifecycle()
     val historyState by historyViewModel.uiState.collectAsStateWithLifecycle()
+    val backupState by backupViewModel.uiState.collectAsStateWithLifecycle()
     var appDestinationName by rememberSaveable { mutableStateOf(AppDestination.EXERCISES.name) }
+    var dataManagementOpen by rememberSaveable { mutableStateOf(false) }
     val appDestination = AppDestination.valueOf(appDestinationName)
     val topLevelStateHolder = rememberSaveableStateHolder()
 
@@ -90,6 +102,14 @@ fun GymTrackerApp(
             onFinishConfirmed = workoutViewModel::finishConfirmed,
             onDismissFinish = workoutViewModel::dismissFinishConfirmation,
             onMessageShown = workoutViewModel::clearMessage,
+        )
+        dataManagementOpen -> BackupScreen(
+            state = backupState,
+            viewModel = backupViewModel,
+            onBack = {
+                dataManagementOpen = false
+                workoutViewModel.recoverActiveWorkout()
+            },
         )
         exerciseState.editor != null -> ExerciseEditorScreen(
             state = exerciseState,
@@ -152,6 +172,7 @@ fun GymTrackerApp(
                         AppDestination.HISTORY -> HistoryScreen(
                             state = historyState,
                             viewModel = historyViewModel,
+                            onManageData = { dataManagementOpen = true },
                         )
                     }
                 }

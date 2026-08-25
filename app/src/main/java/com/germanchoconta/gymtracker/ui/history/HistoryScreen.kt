@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -42,10 +43,16 @@ import com.germanchoconta.gymtracker.data.local.HistoryExerciseRow
 fun HistoryScreen(
     state: HistoryUiState,
     viewModel: HistoryViewModel,
+    onRecoveryContext: () -> Unit = {},
     onManageData: () -> Unit = {},
 ) {
     if (state.selectedExerciseId == null) {
-        HistoryLibrary(state.exercises, viewModel::selectExercise, onManageData)
+        HistoryLibrary(
+            exercises = state.exercises,
+            onExerciseClick = viewModel::selectExercise,
+            onRecoveryContext = onRecoveryContext,
+            onManageData = onManageData,
+        )
     } else {
         HistoryDetail(state, viewModel, viewModel::closeExercise)
     }
@@ -56,6 +63,7 @@ fun HistoryScreen(
 private fun HistoryLibrary(
     exercises: List<HistoryExerciseRow>,
     onExerciseClick: (String) -> Unit,
+    onRecoveryContext: () -> Unit,
     onManageData: () -> Unit,
 ) {
     Scaffold(
@@ -63,6 +71,9 @@ private fun HistoryLibrary(
             TopAppBar(
                 title = { Text("Historial") },
                 actions = {
+                    IconButton(onClick = onRecoveryContext) {
+                        Icon(Icons.Default.FavoriteBorder, contentDescription = "Abrir contexto de recuperación")
+                    }
                     IconButton(onClick = onManageData) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Gestionar backup y exportaciones")
                     }

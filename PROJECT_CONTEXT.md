@@ -1,23 +1,24 @@
 # GymTracker — Project Context & Continuity
 
 > Canonical handoff. Read this first in every GymTracker session, then verify everything directly in GitHub. **GitHub is the source of truth if this file is stale.**
-> Last updated: 2026-08-25 (America/Bogota), during PR8 / Issue #8 implementation.
+> Last updated: 2026-08-25 (America/Bogota), after PR8 / Issue #8 merge and successful post-merge validation.
 
-## 0. Repository, safety, and permanent direction
+## 0. Repository, safety, and permanent product direction
 
 - Repository: `German-Choconta/tareas`.
 - Repository is public.
 - GymTracker only. **Never touch `Pulso` / `pulso-finanzas`.**
-- Never commit real workout data, health data, identifying names/fixtures, credentials, tokens, secrets, private exports or personal backups. Tests/examples must be synthetic and non-identifying.
+- Never commit real workout data, health data, identifying names/fixtures, credentials, tokens, secrets, private exports, personal backups, or other personal information. Tests/examples/benchmarks/screenshots must be synthetic and non-identifying.
 - Product loop: **LOG → COMPARE → UNDERSTAND → PROGRESS**.
 - Workout logger principle: **PREVIOUS + TARGET + TODAY**.
-- Android-first, offline/local-first. Accounts/cloud are outside V1 scope.
-- `WorkoutSet` remains canonical truth. PRs, e1RM, volume, trends, charts, CSV and analytics are derived/recalculable/read-only representations.
+- Android-first and offline/local-first.
+- `WorkoutSet` remains canonical truth.
+- PRs, e1RM, volume, trends, charts, CSV and analytics remain derived/recalculable/read-only representations.
 - Room remains canonical for active and completed workouts.
 - Paging is presentation/query only and never a history-retention limit.
-- Work autonomously in GitHub, but do not advance stages silently. Do not start the next issue until the user explicitly continues.
+- Do not advance roadmap stages silently. Read the next real GitHub issue before designing it and wait for explicit user continuation before beginning implementation.
 
-## 1. Completed stages through PR7
+## 1. Completed roadmap through V1
 
 ### PR #1 — Android foundation
 - MERGED.
@@ -54,7 +55,8 @@
 - Final PR Android CI: `32868139154` (#129) — SUCCESS.
 - Squash merge: `f4076f6d9d7fd09dc735a758c85f60a9a924a93d`.
 - Issue #6 closed/completed.
-- Final PR6 documentation commit: `1905412984ad4b8c04b9937e47844f8b149c4b9f`; CI `32871077072` (#131) — SUCCESS.
+- Final PR6 documentation commit: `1905412984ad4b8c04b9937e47844f8b149c4b9f`.
+- Documentation CI: `32871077072` (#131) — SUCCESS.
 
 ### PR #16 / Issue #7 — Backup, Restore and CSV Export
 - MERGED / COMPLETED.
@@ -69,31 +71,65 @@
 - Documentation-head Android CI: `32880182711` (#152) — SUCCESS.
 - Documentation-head artifacts: debug APK `9575588354`; Room schema `9575490321`.
 
-## 2. Android/toolchain baseline
+### PR #17 / Issue #8 — V1 UX and Reliability Hardening
+- **MERGED / COMPLETED. GymTracker core V1 is release-ready under the repository's current automated contract.**
+- Branch used: `feat/v1-ux-reliability-hardening`.
+- Verified base: PR7 documentation head `f0a5ccb4427ec133b3e7c08806eec54c2e481d37`.
+- Audit/evidence document: `docs/PR8_V1_HARDENING_AUDIT.md`.
+- Final PR head: `fd217b46ed9bef8b2f1c10a5b37d58dfc0467bce`.
+- Final PR Android CI: `32903380126` (#170) — SUCCESS.
+- Final PR artifacts:
+  - `gymtracker-room-schema` — `9583952491`;
+  - `gymtracker-debug-apk` — `9584120582`;
+  - `gymtracker-release-apk` — `9584121122`.
+- Final PR contract passed on the exact head: JVM tests, semantic Room schema verification, API 35 connected tests (52 tests), lint, debug APK, minified/resource-shrunk release APK, and all artifact uploads.
+- Final audit before merge: 13 changed files; GymTracker/CI/docs only; no Pulso paths; no schema v3; only synthetic/non-identifying test data; no pending reviews or review threads; mergeable cleanly.
+- PR was marked ready only after the exact head was green.
+- Squash merge with `expected_head_sha` protection: `feb06cc7459a12178fbd2067e5227c716b89ecd1`.
+- Issue #8 closed/completed automatically by the merge.
+- `main` after merge pointed exactly to `feb06cc7459a12178fbd2067e5227c716b89ecd1`.
+- Post-merge `main` Android CI: `32904132021` (#171) — SUCCESS.
+- Post-merge artifacts:
+  - `gymtracker-room-schema` — `9584194772`;
+  - `gymtracker-debug-apk` — `9584380233`;
+  - `gymtracker-release-apk` — `9584380774`.
+- PR #17 description was updated after merge with exact final evidence; this metadata-only edit did not alter repository code.
+
+## 2. Android/toolchain baseline after PR8
 
 - Native Android / Kotlin / Jetpack Compose / Material 3.
 - Package: `com.germanchoconta.gymtracker`.
-- Android Gradle Plugin `9.3.0`; Kotlin Compose plugin `2.3.21`; Gradle CI `9.5.0`; JDK `17`.
+- Android Gradle Plugin `9.3.0`.
+- Kotlin Compose plugin `2.3.21`.
+- Gradle CI `9.5.0`.
+- JDK `17`.
 - compileSdk `37`; targetSdk `36`; minSdk `28`.
-- Compose BOM `2026.08.00`; Activity Compose `1.13.0`; Lifecycle `2.11.0`.
-- Room `3.0.1`; KSP `2.3.10`; bundled SQLite `2.7.0`.
-- Paging `3.5.1`; Room Paging `3.0.1`; Vico `3.2.3`.
+- Compose BOM `2026.08.00`.
+- Activity Compose `1.13.0`.
+- Lifecycle `2.11.0`.
+- Room `3.0.1`.
+- KSP `2.3.10`.
+- bundled SQLite `2.7.0`.
+- Paging `3.5.1`; Room Paging `3.0.1`.
+- Vico `3.2.3`.
 - `kotlinx-serialization-json/core` `1.8.1`.
 
 Architecture rules:
 - unidirectional data flow and immutable UI state;
 - ViewModels/state holders own screen state;
-- Composables never query Room directly or parse portable files;
+- Composables do not query Room directly or parse portable files;
 - repositories/DAOs are persistence boundaries;
 - Room owns canonical active/completed workout state;
-- SavedState/rememberSaveable are UI/navigation hints, never canonical workout facts;
+- `SavedStateHandle` / `rememberSaveable` are UI/navigation recovery mechanisms, never canonical workout fact storage;
 - DB is an application/process singleton;
 - chart/export/backup encodings never become canonical metric truth.
 
 ## 3. Room schema and historical integrity
 
-- Current DB version: **2**. PR5, PR6, PR7 and PR8 intentionally do **not** create schema v3.
-- Schemas v1/v2 remain committed; `MIGRATION_1_2` remains registered and tested.
+- Current DB version: **2**.
+- PR5, PR6, PR7 and PR8 intentionally did **not** create schema v3.
+- Schemas v1/v2 remain committed.
+- `MIGRATION_1_2` remains registered and tested.
 - v1 identity hash: `4419e2711112b42bfbfa3083e3499613`.
 - v2 identity hash: `251aab4f3ed2b0175df34e37323e31cb`.
 
@@ -122,6 +158,8 @@ Historical integrity:
 - routine edits/removals never rewrite already-started/completed history.
 - archived exercises, null historical routine references and duplicate exercise occurrences remain representable.
 
+If any future stage genuinely requires a schema change, first demonstrate the need and assess migration, historical compatibility, backup/restore compatibility and rollback consequences. Never introduce schema v3 accidentally.
+
 ## 4. Logger, History, PR and Progress invariants
 
 PR4 logger preserves transactional Routine → Workout start, immediate Room autosave, TARGET snapshots in `WorkoutExerciseEntity`, deterministic PREVIOUS modes (`ANY_WORKOUT`, `SAME_ROUTINE`), set types `WARMUP`, `WORK`, `DROP`, `FAILURE`, rest timer, notes, active-workout recovery and finish behavior.
@@ -129,7 +167,9 @@ PR4 logger preserves transactional Routine → Workout start, immediate Room aut
 PR5 History preserves unlimited DB history. Raw deterministic order remains:
 `workout.startedAt DESC → workout.id DESC → workoutExercise.position ASC → workoutExercise.id ASC → set.position ASC → set.id ASC`.
 
-PR/analytics eligibility remains: finished workout + completed set + reps > 0 + load > 0 + type in `WORK/DROP/FAILURE`. `WARMUP` remains visible in raw history but excluded from PR/e1RM/volume analytics.
+PR/analytics eligibility remains:
+finished workout + completed set + reps > 0 + load > 0 + type in `WORK/DROP/FAILURE`.
+`WARMUP` remains visible in raw history but excluded from PR/e1RM/volume analytics.
 
 PR chronology remains:
 `startedAt ASC → workoutId ASC → workoutExercise.position ASC → workoutExerciseId ASC → set.position ASC → setId ASC`.
@@ -143,7 +183,7 @@ Definitions retained:
 - exercise-session volume = overflow-safe `BigInteger` sum across all occurrences in the workout;
 - volume is descriptive, not a universal quality score.
 
-PR6 Progress remains derived/recalculable. It offers Load, Reps at exact load, e1RM, Volume and Frequency; custom dates are inclusive in UI and represented internally as `[startOfDay(start), startOfDay(end + 1))`; missing performance dates are not synthetic zeroes; finite frequency buckets may contain explicit zeroes. Vico/`Double` remain renderer-only.
+PR6 Progress remains derived/recalculable. It offers Load, Reps at exact load, e1RM, Volume and Frequency. Custom dates are inclusive in UI and represented internally as `[startOfDay(start), startOfDay(end + 1))`. Missing performance dates are not synthetic zeroes; finite frequency buckets may contain explicit zeroes. Vico/`Double` remain renderer-only.
 
 ## 5. PR7 backup/restore invariants — do not regress
 
@@ -158,7 +198,7 @@ Manual restore:
 CSV:
 `Room snapshot → export-only CSV → SAF output stream`
 
-Important retained semantics:
+Retained semantics:
 - portable format V1 covers all eight canonical tables and preserves exact IDs/grams/RIR/timestamps/null relations;
 - restore V1 is replace-all only; merge remains out of scope;
 - no destructive mutation before validated preview + separate confirmation;
@@ -167,93 +207,86 @@ Important retained semantics:
 - no broad storage permission;
 - SHA-256 is corruption/integrity detection, not authenticity;
 - manual backup is the durable user-owned path; OS Auto Backup is best-effort convenience;
-- decoded import preview lives in ViewModel memory only. **Process death during import preview may require file re-selection. PR8 does not change this limitation.**
+- decoded import preview lives in ViewModel memory only;
+- **process death during import preview may require file re-selection; PR8 deliberately did not change this limitation.**
 
-## 6. PR8 / Issue #8 — V1 UX and reliability hardening — IN PROGRESS
-
-- Issue #8: `PR 8 — V1 UX and reliability hardening` — OPEN until merge.
-- Draft PR: **#17 — `GymTracker PR 8: V1 UX and reliability hardening`**.
-- Branch: `feat/v1-ux-reliability-hardening`.
-- Verified base: PR7 documentation head `f0a5ccb4427ec133b3e7c08806eec54c2e481d37`.
-- Evidence/audit: `docs/PR8_V1_HARDENING_AUDIT.md`.
-- Latest implementation/audit head before this handoff update: `ae564890ef67a17ab9bfd8b645f6b714fda988b6`.
-- Keep PR #17 draft until the **exact final head** passes the hardened CI contract and final scope/review/schema audit.
-
-### PR8 changes implemented so far
+## 6. PR8 hardening that is now part of V1
 
 Accessibility / ergonomics:
-- top-level Exercise/Routine create FABs expose specific TalkBack descriptions instead of an ambiguous visual `+`;
+- Exercise and Routine create FABs expose specific TalkBack descriptions instead of ambiguous `+` semantics;
 - critical Material controls retain minimum interactive sizing;
-- workout exercise heading has heading semantics;
-- app loading and history error status expose useful accessible text/live status;
-- workout set editor adapts on narrow widths: below 360 dp, load/reps/RIR stack vertically instead of being squeezed into three columns;
-- completed-state semantics and explicit destructive set-delete labels remain available.
+- workout exercise titles expose heading semantics;
+- loading/error states expose useful accessible text/status where appropriate;
+- workout set editor adapts below 360 dp by stacking load/reps/RIR vertically;
+- completed-state semantics and explicit destructive set-delete labels are retained;
+- critical accessibility checks run in instrumented Compose tests.
 
 Light/dark:
-- existing `isSystemInDarkTheme()` + Material 3 light/dark schemes remain the source of theme behavior;
-- no new hard-coded light-only colors were introduced;
-- no second theme system was added.
+- `isSystemInDarkTheme()` plus Material 3 light/dark schemes remain the theme source;
+- no second theme system and no light-only hardcoded palette were introduced;
+- representative content is exercised under both schemes by accessibility tests.
 
 Empty/loading/error:
-- raw Paging history now has explicit refresh loading, empty detail, recoverable refresh error + retry, append loading and append-error retry;
-- existing Exercises/Routines/Progress/Backup empty/error states remain intact.
+- raw Paging history has explicit refresh loading, empty detail, recoverable refresh error + retry, append loading and append-error retry;
+- existing Exercises/Routines/Progress/Backup empty/error behavior remains intact.
 
 Recreation/restoration:
-- canonical active workout and rest-timer recovery still come from Room;
-- History/Progress continues using `SavedStateHandle` for appropriate selection/filter state;
-- safe ephemeral workout modal state uses `rememberSaveable` (add/replace picker, completed-set delete confirmation, set-type menu);
-- PR7 import preview process-death limitation is deliberately unchanged.
+- active workout and rest-timer canonical recovery remains Room-owned;
+- History/Progress use `SavedStateHandle` for appropriate selection/filter UI state;
+- safe ephemeral workout modal state uses `rememberSaveable` for add/replace picker, completed-set delete confirmation and set-type menu;
+- PR7 import-preview process-death limitation remains explicit.
 
 Destructive safeguards:
-- workout finish now has a synchronous ViewModel `finishing` in-flight guard;
-- Room finish is checked by affected-row count with `finishedAt IS NULL`, so repeated confirmation cannot report a second successful transition;
-- pending canonical autosaves/notes are still flushed before finish;
-- PR7 restore double-confirm protection remains unchanged.
+- workout finish has a synchronous ViewModel `finishing` in-flight guard;
+- Room finish uses affected-row count with `finishedAt IS NULL`, so repeated confirmation cannot report a second successful transition;
+- pending canonical autosaves/notes are flushed before finish;
+- PR7 restore confirmation semantics are unchanged.
 
 Database/query performance:
-- active workout aggregate no longer issues one set query per workout exercise: one ordered workout-set query is grouped in memory;
-- current exercise metadata during logger hydration uses one batched `IN (...)` query instead of one read per exercise;
+- active workout aggregate uses one ordered workout-set read grouped in memory rather than one set query per workout exercise;
+- current exercise metadata during logger hydration uses one batched `IN (...)` query rather than one read per exercise;
 - PREVIOUS lookup remains contextual per exercise to preserve reference semantics;
-- routine-editor name hydration is documented but not changed because no measured hot-path evidence justifies broader churn;
-- no new index/schema migration was justified; DB remains v2.
+- no new index or schema migration was justified by evidence;
+- no Baseline Profile/startup dependency was added without measured startup evidence.
 
-Startup/release:
-- DB remains application-context singleton;
-- no Baseline Profile/startup dependency was added without measured evidence;
-- CI now assembles the real minified/resource-shrunk `release` variant in addition to debug;
-- CI uploads `gymtracker-release-apk`; missing/failing release output fails the contract.
+## 7. Hardened Android CI contract after PR8
 
-Tests:
-- new synthetic persistence coverage verifies deterministic batched aggregate hydration and first-write-only/idempotent workout finish;
-- new critical Compose tests cover specific TalkBack actions and 320×640-class logger ergonomics;
-- official Compose accessibility-test bridge is `androidTestImplementation` only and runs on CI API 35;
-- all older PR4–PR7 tests remain part of the suite.
-
-### PR8 non-scope still enforced
-
-No backend/accounts/cloud sync, Health Connect, Wear OS, AI coaching, monetization, progression prescription, PR/e1RM/volume formula changes, PR7 portable-format/restore semantic changes, or Room schema v3.
-
-## 7. Hardened Android CI contract
-
-PRs and pushes to `main` now run:
+PRs and pushes to `main` run:
 1. JDK/Android/Gradle setup;
 2. snapshot committed Room schemas;
 3. JVM tests;
 4. semantic Room schema verification;
 5. upload `gymtracker-room-schema`;
 6. enable KVM;
-7. API 35 `connectedDebugAndroidTest`;
+7. API 35 `connectedDebugAndroidTest` using the 320×640-class emulator setup;
 8. lint;
 9. assemble debug APK;
-10. assemble **release APK** with the project’s actual release minification/resource shrinking;
+10. assemble **release APK** with the project's actual release minification/resource shrinking;
 11. upload `gymtracker-debug-apk`;
 12. upload `gymtracker-release-apk`.
 
-PR8 closure requires the exact final PR head to pass every step and expose all three artifacts. Before ready/merge, audit changed paths (no Pulso), privacy/synthetic fixtures, schema v2, review threads, mergeability and Issue #8 scope. Merge must be squash-protected by the expected exact head SHA.
+A future PR must not be treated as green using an older SHA. Validate the exact head and its artifacts before ready/merge.
 
-After merge, verify linked Issue #8 closed/completed and exact post-merge `main` CI + all artifacts. Then commit the final merged-state handoff to `main` and verify the exact documentation-head CI under the same hardened contract.
+## 8. V1 release-readiness statement
 
-## 8. Roadmap
+As of the PR8 squash `feb06cc7459a12178fbd2067e5227c716b89ecd1` and post-merge CI `32904132021` (#171):
+
+- core Exercises, Routine Editor, Workout Logger, unlimited History, PR engine, Progress analytics, Backup/Restore and CSV functionality are present;
+- critical accessibility and narrow-screen regressions have automated coverage;
+- system light/dark theme behavior remains Material 3 based;
+- critical loading/error recovery has explicit UI handling;
+- canonical workout recovery is Room-based and safe UI recreation state is separated from canonical state;
+- destructive workout finish is guarded/idempotent;
+- evidenced logger N+1 reads were reduced without schema changes;
+- DB schema remains v2;
+- debug and real minified/resource-shrunk release builds succeed;
+- exact PR and exact post-merge CI are green;
+- all automated fixtures used for PR8 are synthetic/non-identifying;
+- Issue #8 is closed/completed.
+
+This means **the core local-first GymTracker V1 is release-ready under the current repository test/build contract**. This is not a claim of Play Store publication, medical validation, cloud sync, Health Connect support or Wear OS support.
+
+## 9. Post-V1 roadmap — do not start silently
 
 - PR #1 — Android foundation — MERGED.
 - PR #2 / Issue #2 — Room local data foundation — MERGED / COMPLETED.
@@ -262,18 +295,38 @@ After merge, verify linked Issue #8 closed/completed and exact post-merge `main`
 - PR #5 / Issue #5 — Unlimited History and PR Engine — MERGED / COMPLETED.
 - PR #6 / Issue #6 — Progress Analytics — MERGED / COMPLETED.
 - PR #7 / Issue #7 — Backup, Restore and CSV Export — MERGED / COMPLETED.
-- PR #8 / Issue #8 — V1 UX / reliability hardening — **IN PROGRESS — DRAFT PR #17**.
-- Issue #9 — post-V1 Health Connect recovery context — **DO NOT START DURING PR8**.
-- Issue #10 — post-V1 Wear OS companion — **DO NOT START DURING PR8**.
+- PR #8 / Issue #8 — V1 UX / reliability hardening — MERGED / COMPLETED.
+- **Issue #9 — `Post-V1 — Health Connect recovery context` — OPEN, NEXT ROADMAP STAGE, NOT STARTED.**
+- Issue #10 — post-V1 Wear OS companion — OPEN/DEFERRED; do not start during Issue #9 unless the roadmap is explicitly changed.
 
-## 9. Next action from this handoff
+Verified Issue #9 goal:
+optionally import health/recovery context through Health Connect with explicit user permission.
 
-1. Verify CI on the exact current PR #17 head; do not reuse a green result from an older head.
-2. Fix any instrumented/accessibility/lint/release failure on the PR8 branch.
-3. Complete final diff/scope/privacy/schema/review/mergeability audit.
-4. Update PR #17 body with actual evidence and exact final CI/artifacts.
-5. Only when exact head is green and audit complete, mark PR #17 ready.
-6. Squash merge with `expected_head_sha` protection.
-7. Verify Issue #8 closed/completed and post-merge `main` CI/artifacts.
-8. Write final PR8 merged-state handoff to `main` and verify its exact documentation-head CI.
-9. **Do not start Issue #9 silently.** After PR8 closure, read the real Issue #9 and provide the user the complete standalone next-stage prompt.
+Issue #9 candidate data currently listed by GitHub:
+- sleep duration/stages where available;
+- resting heart rate;
+- HRV where supported;
+- exercise/session context where useful.
+
+Issue #9 guardrails currently listed by GitHub:
+- workout logging must work with zero health permissions;
+- never present a recovery estimate as a medical diagnosis;
+- do not automatically change prescribed load from one day's recovery score;
+- keep raw imported health data separate from derived correlations;
+- provide deletion/permission controls.
+
+Before Issue #9 implementation, verify current official Health Connect documentation, permissions, background-read requirements, history-read limits, Play policy requirements and Samsung-specific interoperability. Do not infer these from older documentation.
+
+## 10. Next action from this handoff
+
+PR8 is closed. Do **not** reopen it or change PR4–PR8 semantics without a concrete, demonstrated regression.
+
+When the user explicitly continues to the next roadmap stage:
+1. verify the exact current `main` head and the final documentation-head CI;
+2. read this file;
+3. read Issue #9 directly from GitHub again;
+4. research current official Health Connect and Play policy documentation before making architecture decisions;
+5. define Issue #9 scope from real findings without coupling core workout logging to health permissions;
+6. keep raw health records separate from GymTracker's canonical workout truth and from derived correlations;
+7. create the Issue #9 branch/PR only after the above verification;
+8. do not start Issue #10 silently.

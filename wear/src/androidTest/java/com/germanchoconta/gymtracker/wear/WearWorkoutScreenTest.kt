@@ -1,14 +1,11 @@
 package com.germanchoconta.gymtracker.wear
 
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.hasContentDescription
-import androidx.compose.ui.test.hasScrollToNodeAction
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.wear.compose.material3.MaterialTheme
 import com.germanchoconta.gymtracker.wear.protocol.WearActiveWorkoutSnapshot
@@ -44,22 +41,19 @@ class WearWorkoutScreenTest {
             }
         }
 
-        assertVisibleAfterScroll(hasText("Synthetic Press")) {
-            composeRule.onNodeWithText("Synthetic Press").assertIsDisplayed()
-        }
-        assertVisibleAfterScroll(hasText("PREVIOUS  75 kg × 8 • RIR 2")) {
-            composeRule.onNodeWithText("PREVIOUS  75 kg × 8 • RIR 2").assertIsDisplayed()
-        }
-        assertVisibleAfterScroll(hasText("TARGET  6–10 reps • RIR 2")) {
-            composeRule.onNodeWithText("TARGET  6–10 reps • RIR 2").assertIsDisplayed()
-        }
-        assertVisibleAfterScroll(hasContentDescription("Increase Reps")) {
-            composeRule.onNodeWithContentDescription("Increase Reps").performClick()
-        }
+        scrollToItem(2)
+        composeRule.onNodeWithText("Synthetic Press").assertIsDisplayed()
+
+        scrollToItem(4)
+        composeRule.onNodeWithText("PREVIOUS  75 kg × 8 • RIR 2").assertIsDisplayed()
+        composeRule.onNodeWithText("TARGET  6–10 reps • RIR 2").assertIsDisplayed()
+
+        scrollToItem(6)
+        composeRule.onNodeWithContentDescription("Increase Reps").performClick()
         assertEquals(1, repsUps)
-        assertVisibleAfterScroll(hasContentDescription("Complete current set")) {
-            composeRule.onNodeWithContentDescription("Complete current set").assertIsDisplayed()
-        }
+
+        scrollToItem(9)
+        composeRule.onNodeWithContentDescription("Complete current set").assertIsDisplayed()
     }
 
     @Test
@@ -83,23 +77,16 @@ class WearWorkoutScreenTest {
             }
         }
 
-        assertVisibleAfterScroll(hasText("No active workout")) {
-            composeRule.onNodeWithText("No active workout").assertIsDisplayed()
-        }
-        assertVisibleAfterScroll(hasText("Start or resume on your phone")) {
-            composeRule.onNodeWithText("Start or resume on your phone").assertIsDisplayed()
-        }
-        assertVisibleAfterScroll(hasText("Refresh")) {
-            composeRule.onNodeWithText("Refresh").assertIsDisplayed()
-        }
+        scrollToItem(1)
+        composeRule.onNodeWithText("No active workout").assertIsDisplayed()
+        scrollToItem(2)
+        composeRule.onNodeWithText("Start or resume on your phone").assertIsDisplayed()
+        scrollToItem(3)
+        composeRule.onNodeWithText("Refresh").assertIsDisplayed()
     }
 
-    private fun assertVisibleAfterScroll(
-        matcher: SemanticsMatcher,
-        assertion: () -> Unit,
-    ) {
-        composeRule.onNode(hasScrollToNodeAction()).performScrollToNode(matcher)
-        assertion()
+    private fun scrollToItem(index: Int) {
+        composeRule.onNodeWithTag("wear-workout-list").performScrollToIndex(index)
     }
 
     private fun syntheticUiState() = WearWorkoutUiState(

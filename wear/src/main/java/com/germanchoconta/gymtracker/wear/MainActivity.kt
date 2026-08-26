@@ -5,27 +5,31 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.MaterialTheme
+import androidx.wear.compose.material3.ScreenScaffold
 import androidx.wear.compose.material3.Text
 import com.germanchoconta.gymtracker.wear.protocol.WearPreviousSetSnapshot
 import com.germanchoconta.gymtracker.wear.protocol.WearSetSnapshot
@@ -81,110 +85,119 @@ fun WearWorkoutScreen(
 ) {
     val active = uiState.activeWorkout
     val current = uiState.current
-    ScalingLazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        item { SyncStatus(uiState) }
-        if (active == null) {
-            item {
-                Text(
-                    text = "No active workout",
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-            }
-            item { Text("Start or resume on your phone", textAlign = TextAlign.Center) }
-            item {
-                Button(
-                    onClick = onRefresh,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                ) { Text("Refresh") }
-            }
-            return@ScalingLazyColumn
-        }
+    val listState = rememberTransformingLazyColumnState()
 
-        item { Text(active.title, style = MaterialTheme.typography.labelMedium) }
-        val restEndsAt = uiState.restTimerEndsAt
-        if (restEndsAt != null) item { RestTimer(restEndsAt) }
+    AppScaffold {
+        ScreenScaffold(scrollState = listState) { contentPadding ->
+            TransformingLazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize().testTag(WORKOUT_LIST_TEST_TAG),
+                contentPadding = contentPadding,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                item { SyncStatus(uiState) }
+                if (active == null) {
+                    item {
+                        Text(
+                            text = "No active workout",
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
+                    item { Text("Start or resume on your phone", textAlign = TextAlign.Center) }
+                    item {
+                        Button(
+                            onClick = onRefresh,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                        ) { Text("Refresh") }
+                    }
+                    return@TransformingLazyColumn
+                }
 
-        if (current == null) {
-            item {
-                Text(
-                    "All sets logged",
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-            }
-            item { Text("Finish or manage the workout on your phone", textAlign = TextAlign.Center) }
-            item {
-                Button(
-                    onClick = onRefresh,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                ) { Text("Refresh") }
-            }
-            return@ScalingLazyColumn
-        }
+                item { Text(active.title, style = MaterialTheme.typography.labelMedium) }
+                val restEndsAt = uiState.restTimerEndsAt
+                if (restEndsAt != null) item { RestTimer(restEndsAt) }
 
-        item {
-            Text(
-                current.exercise.name,
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.titleMedium,
-            )
-        }
-        item {
-            Text(
-                "Set ${current.set.position + 1}${current.exercise.targetSetCount?.let { " / $it" }.orEmpty()}",
-                style = MaterialTheme.typography.labelLarge,
-            )
-        }
-        item { PreviousTargetToday(current) }
-        item {
-            NumericControl(
-                label = "Load",
-                value = "${formatKg(current.set.loadGrams)} kg",
-                onDown = onLoadDown,
-                onUp = onLoadUp,
-            )
-        }
-        item {
-            NumericControl(
-                label = "Reps",
-                value = current.set.reps.toString(),
-                onDown = onRepsDown,
-                onUp = onRepsUp,
-            )
-        }
-        item {
-            NumericControl(
-                label = "RIR",
-                value = current.set.rirTenths?.let(::formatRir) ?: "—",
-                onDown = onRirDown,
-                onUp = onRirUp,
-            )
-        }
-        if (current.set.rirTenths != null) {
-            item {
-                Button(
-                    onClick = onClearRir,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                ) { Text("Clear RIR") }
+                if (current == null) {
+                    item {
+                        Text(
+                            "All sets logged",
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
+                    item { Text("Finish or manage the workout on your phone", textAlign = TextAlign.Center) }
+                    item {
+                        Button(
+                            onClick = onRefresh,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                        ) { Text("Refresh") }
+                    }
+                    return@TransformingLazyColumn
+                }
+
+                item {
+                    Text(
+                        current.exercise.name,
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                }
+                item {
+                    Text(
+                        "Set ${current.set.position + 1}${current.exercise.targetSetCount?.let { " / $it" }.orEmpty()}",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+                item { PreviousTargetToday(current) }
+                item {
+                    NumericControl(
+                        label = "Load",
+                        value = "${formatKg(current.set.loadGrams)} kg",
+                        onDown = onLoadDown,
+                        onUp = onLoadUp,
+                    )
+                }
+                item {
+                    NumericControl(
+                        label = "Reps",
+                        value = current.set.reps.toString(),
+                        onDown = onRepsDown,
+                        onUp = onRepsUp,
+                    )
+                }
+                item {
+                    NumericControl(
+                        label = "RIR",
+                        value = current.set.rirTenths?.let(::formatRir) ?: "—",
+                        onDown = onRirDown,
+                        onUp = onRirUp,
+                    )
+                }
+                if (current.set.rirTenths != null) {
+                    item {
+                        Button(
+                            onClick = onClearRir,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        ) { Text("Clear RIR") }
+                    }
+                }
+                uiState.validationMessage?.let { message ->
+                    item { Text(message, textAlign = TextAlign.Center) }
+                }
+                item {
+                    Button(
+                        onClick = onComplete,
+                        enabled = current.set.reps > 0,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 56.dp)
+                            .semantics { contentDescription = "Complete current set" },
+                    ) { Text("Complete set") }
+                }
+                item { Spacer(Modifier.height(8.dp)) }
             }
         }
-        uiState.validationMessage?.let { message -> item { Text(message, textAlign = TextAlign.Center) } }
-        item {
-            Button(
-                onClick = onComplete,
-                enabled = current.set.reps > 0,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 56.dp)
-                    .semantics { contentDescription = "Complete current set" },
-            ) { Text("Complete set") }
-        }
-        item { Spacer(Modifier.height(8.dp)) }
     }
 }
 
@@ -197,7 +210,9 @@ private fun SyncStatus(uiState: WearWorkoutUiState) {
         else -> "Phone unavailable"
     }
     Text(text, textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
-    uiState.conflictMessage?.let { Text(it, textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall) }
+    uiState.conflictMessage?.let {
+        Text(it, textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
+    }
 }
 
 @Composable
@@ -227,7 +242,7 @@ private fun NumericControl(
 ) {
     Text(label, style = MaterialTheme.typography.labelMedium)
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -276,3 +291,5 @@ private fun formatKg(grams: Long): String {
 
 private fun formatRir(tenths: Int): String =
     if (tenths % 10 == 0) (tenths / 10).toString() else "${tenths / 10}.${tenths % 10}"
+
+internal const val WORKOUT_LIST_TEST_TAG = "wear-workout-list"

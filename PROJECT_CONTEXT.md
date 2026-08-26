@@ -230,88 +230,63 @@ This documentation update exists only to record that resolution. Do **not** crea
 
 Issue #10 is considered technically/documentally closed under that distinction.
 
-## Issue #21 / PR #22 — DRAFT IMPLEMENTATION STATE
+## Issue #21 / PR #22 — FINAL CLOSED STATE
 
 Issue #21: **Post-V1 — Deterministic progression recommendations**.
-PR #22: `GymTracker PR 11: deterministic progression recommendations`.
-Branch: `feat/deterministic-progression-recommendations`.
-Design contract: `docs/ISSUE21_PROGRESSION_DESIGN.md`.
+PR #22: **GymTracker PR 11: deterministic progression recommendations**.
+Branch used: feat/deterministic-progression-recommendations.
 
-Issue #21 was created only after verifying the real GitHub state; GitHub assigned number **#21**. Do not rename/re-number it to an assumed Issue #11.
+Verified GitHub final state:
 
-### Baseline and pre-implementation gate
+- PR #22: CLOSED / MERGED / draft=false.
+- Final PR head: 6911685ad934fc074ea92eaedf254b87b0b568ca.
+- Squash/main commit: 26ba5f5d1c7e167310755203383067305ac2a338.
+- Tree: 841138b5719e52b443718c91e74567dc6ed1ecef.
+- Parent pre-merge main: 508e0c75127fb784f85895dc5bbb7e288e52c07b.
+- Issue #21: CLOSED / completed automatically through Closes #21.
+- Post-merge Android CI #227 / run 33008372588: SUCCESS on exact main 26ba5f5d1c7e167310755203383067305ac2a338.
+- Both jobs passed: test-build and wear-connected.
+- Exact-head artifacts: Room schema 9621540142; phone debug APK 9621771968; phone release APK 9621773082; Wear debug APK 9621774583; Wear release APK 9621775430.
 
-The feature branch was created from exact main `508e0c75127fb784f85895dc5bbb7e288e52c07b`.
+Final contract retained:
 
-Android CI #223 (`32991824542`) on that exact main head initially failed only the dedicated Wear connected test `WearWorkoutScreenTest.noActiveWorkoutStaysMinimal` with `No compose hierarchies found in the app`. The entire `test-build` job passed. A safe re-run of only the failed Wear job then passed on the same exact SHA; attempt 2 of #223 was **SUCCESS**. Treat the first failure as an observed instrumentation flake, not a reproducible product regression.
+- phone Room is the only canonical workout/history truth;
+- Room database remains version 2 with schemas v1/v2 only;
+- deterministic recommendations are derived/recalculable and never persisted as canonical truth;
+- explicit Apply writes only TODAY load through the canonical autosave path;
+- reps, RIR, type, completion, history and routine TARGET are not mutated by Apply;
+- PR5 PersonalRecordEngine remains the sole canonical Epley/e1RM implementation;
+- Wear remains a companion and not a second canonical history store;
+- Health Connect remains optional/read-only and separate from prescription;
+- backup/restore/CSV semantics remain unchanged.
 
-### Progression architecture locked for Issue #21
+## Issue #23 — Release readiness and integrated acceptance — ACTIVE
 
-- One progression engine only: evolve the pre-existing foundational `ProgressionEngine`; do not create a parallel coaching engine.
-- Production truth uses integer grams (`Long`) and RIR tenths (`Int?`), not `Double` kilograms.
-- Recommendations are derived/recalculable output and are never persisted as canonical history/routine truth.
-- Room remains version **2**, schemas **v1/v2 only**; no recommendation cache/table/column and no schema v3.
-- Evidence is only completed `WORK` sets from finished workouts, with reps > 0.
-- `WARMUP`, `DROP`, `FAILURE`, incomplete sets and active workouts cannot drive normal double progression.
-- Existing `ANY_WORKOUT` / `SAME_ROUTINE` semantics remain canonical.
-- Comparison is per same set position with deterministic newest ordering and at most one observation per prior workout.
-- Legacy/incomplete TARGET snapshots degrade to no recommendation rather than inventing defaults.
-- Zero/bodyweight load never generates a made-up positive external load.
-- Top-of-range can increase exact configured load increment; optional RIR can conservatively block an increase when actual effort was harder than target.
-- Missing actual RIR does not block progression; rationale states when the decision is reps-only.
-- In-range performance holds load and suggests a non-canonical next-rep aim.
-- One under-range session never triggers reduction.
-- Reduction requires the latest two different comparable finished workouts to be under-range at the same exact positive load; differing loads produce `REVIEW`.
-- Checked integer addition prevents overflow; unsafe arithmetic produces `REVIEW`.
-- Each recommendation carries explicit `BASE WORK` evidence (load/reps and optional RIR) before its explanation.
-- PR5 `PersonalRecordEngine.estimatedOneRepMax` remains the sole canonical e1RM implementation; the duplicate Epley helper was removed from `ProgressionEngine`.
+GitHub assigned the real issue number **#23** on 2026-08-26 after a fresh backlog check returned zero open issues and zero open PRs and no equivalent issue.
 
-### User-control / UI contract
+Issue title: **Post-V1 — Release readiness and integrated acceptance**.
+Branch: feat/release-readiness-integrated-acceptance.
+Exact branch base: 26ba5f5d1c7e167310755203383067305ac2a338.
 
-- Recommendations appear in the phone workout logger with TARGET / PREVIOUS / TODAY.
-- User sees a structured action (`NO_BASELINE`, `INCREASE_LOAD`, `HOLD_LOAD`, `REDUCE_LOAD`, `REVIEW`), concrete evidence and rationale.
-- `Aplicar <kg>` is explicit user action only.
-- Applying a suggestion routes through the existing TODAY load autosave path and changes only active set load.
-- It never writes suggested reps as performed reps, never writes RIR/completion/history, and never mutates routine targets.
-- User can ignore or override every recommendation.
-- Wear recommendation UI/protocol is out of scope and unchanged.
-- Health Connect remains optional/read-only context and never modifies prescribed load in this issue.
+The issue Definition of Done requires integrated synthetic acceptance of LOG → COMPARE → UNDERSTAND → PROGRESS while preserving PREVIOUS + TARGET + TODAY, all PR4–PR11 semantics, Room v2/schemas 1–2, Health Connect optional/read-only behavior, and phone-canonical Wear semantics.
 
-### Validation history before the final gate
+Verified release-readiness findings before implementation:
 
-Initial PR CI #224 (`32996149558`) on head `4d5087411c117df54c6e9f6456171cbd5fcd7fdd` failed during mobile unit-test compilation because the existing synthetic `HistoryViewModelTest.FakeHistoryDao` had not yet implemented the newly added read-only DAO method. Production Kotlin compilation had already passed. The fake was updated with an empty synthetic implementation; no History semantics changed.
+- phone version was versionCode 1 / versionName 0.1.0;
+- Wear version was versionCode 10001 / versionName 0.1.0;
+- both share applicationId com.germanchoconta.gymtracker;
+- compileSdk is 37 and targetSdk is 36;
+- release variants are minified and resource-shrunk;
+- no release signing configuration or signing secrets exist in the repository;
+- README still incorrectly described the project as Repository initialization;
+- no GitHub Releases existed.
 
-Stabilized head `b6eef192432563271ff9df52cf7332c85bce479b` then passed Android CI #225 (`32996421831`) completely:
+Issue #23 changes the release-candidate versionName to **1.0.0-rc1** while retaining the first unpublished phone/Wear version codes 1 and 10001. CI remains secret-free and adds unsigned phone AAB + release metadata/checksum evidence; production signing remains an external distribution step.
 
-- `test-build` — SUCCESS;
-- `wear-connected` — SUCCESS;
-- mobile JVM tests — SUCCESS;
-- Wear protocol/Wear JVM tests — SUCCESS;
-- semantic Room schema verification — SUCCESS;
-- mobile API 35 connected tests — SUCCESS;
-- mobile lint — SUCCESS;
-- Wear/protocol lint — SUCCESS;
-- mobile debug/release builds — SUCCESS;
-- Wear debug/release builds — SUCCESS;
-- all expected uploads — SUCCESS.
+Integrated acceptance is implemented in ReleaseIntegratedAcceptanceTest using only synthetic, non-identifying data and production Room/repository/ViewModel/domain paths. Existing focused Health Connect, Wear, accessibility, backup, History and analytics gates remain authoritative for their specialized contracts.
 
-Artifacts from CI #225 / `b6eef192...`:
+See docs/ISSUE23_RELEASE_READINESS.md for the acceptance matrix and distribution boundary.
 
-- `gymtracker-room-schema` — `9616778236`;
-- `gymtracker-debug-apk` — `9617030304`;
-- `gymtracker-release-apk` — `9617031787`;
-- `gymtracker-wear-debug-apk` — `9617033521`;
-- `gymtracker-wear-release-apk` — `9617034610`.
+At the time this section was authored, the implementation branch exists and the PR has not yet been assigned a real GitHub number. After the PR is created, update this section once with the real PR number before the final exact-head CI gate. Do not create a documentation-only retry loop merely to chase CI.
 
-### Final-candidate additions in the commit containing this handoff
-
-The commit containing this section also adds final acceptance hardening:
-
-- recommendation explanations begin with concrete `BASE WORK` evidence using exact integer-derived kg/RIR formatting;
-- a JVM test locks that evidence string;
-- an Android instrumentation test uses real in-memory Room + the real `WorkoutLoggerViewModel` to prove explicit `applySuggestedLoad()` persists only `loadGrams` while preserving reps, RIR, type, completion and TARGET snapshot;
-- the same instrumentation test proves a legacy/incomplete TARGET snapshot produces no recommendation even when valid comparable history exists.
-
-**Do not mark PR #22 ready and do not merge it based on CI #225 alone.** The exact GitHub head after this final-candidate commit must pass the complete hardened Android CI contract again. Verify the final SHA, both jobs, all five artifacts, PR diff/reviews/comments and scope/privacy audit directly in GitHub before ready/merge. GitHub wins if this section is stale.
-
-Do not start another issue while #21 / PR #22 is open.
+**Do not merge the Issue #23 PR without explicit user approval. Do not advance to another issue while #23 is open.**

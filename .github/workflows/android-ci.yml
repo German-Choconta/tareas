@@ -88,10 +88,50 @@ jobs:
         run: gradle :app:assembleDebug --stacktrace
       - name: Assemble mobile release APK
         run: gradle :app:assembleRelease --stacktrace
+      - name: Assemble mobile release App Bundle
+        run: gradle :app:bundleRelease --stacktrace
       - name: Assemble Wear debug APK
         run: gradle :wear:assembleDebug --stacktrace
       - name: Assemble Wear release APK
         run: gradle :wear:assembleRelease --stacktrace
+      - name: Verify release artifact metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          AAPT2="$ANDROID_HOME/build-tools/37.0.0/aapt2"
+          APKSIGNER="$ANDROID_HOME/build-tools/37.0.0/apksigner"
+          PHONE_APK="$(find app/build/outputs/apk/release -type f -name '*.apk' -print -quit)"
+          WEAR_APK="$(find wear/build/outputs/apk/release -type f -name '*.apk' -print -quit)"
+          PHONE_AAB="app/build/outputs/bundle/release/app-release.aab"
+
+          test -n "$PHONE_APK"
+          test -n "$WEAR_APK"
+          test -f "$PHONE_AAB"
+
+          PHONE_BADGING="$("$AAPT2" dump badging "$PHONE_APK" | head -n 1)"
+          WEAR_BADGING="$("$AAPT2" dump badging "$WEAR_APK" | head -n 1)"
+          echo "$PHONE_BADGING" | grep -F "package: name='com.germanchoconta.gymtracker' versionCode='1' versionName='1.0.0-rc1'"
+          echo "$WEAR_BADGING" | grep -F "package: name='com.germanchoconta.gymtracker' versionCode='10001' versionName='1.0.0-rc1'"
+
+          if "$APKSIGNER" verify "$PHONE_APK"; then
+            echo "Phone release APK unexpectedly contains a distribution signature."
+            exit 1
+          fi
+          if "$APKSIGNER" verify "$WEAR_APK"; then
+            echo "Wear release APK unexpectedly contains a distribution signature."
+            exit 1
+          fi
+
+          {
+            echo "release_candidate=1.0.0-rc1"
+            echo "application_id=com.germanchoconta.gymtracker"
+            echo "phone_version_code=1"
+            echo "wear_version_code=10001"
+            echo "phone_release_apk_signed=false"
+            echo "wear_release_apk_signed=false"
+            echo "phone_aab_signed=false"
+            sha256sum "$PHONE_APK" "$WEAR_APK" "$PHONE_AAB"
+          } > release-artifact-metadata.txt
       - name: Upload mobile debug APK
         uses: actions/upload-artifact@v4
         with:
@@ -104,6 +144,20 @@ jobs:
         with:
           name: gymtracker-release-apk
           path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload mobile release App Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: gymtracker-release-unsigned-aab
+          path: app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload release artifact metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: gymtracker-release-metadata
+          path: release-artifact-metadata.txt
           if-no-files-found: error
           retention-days: 14
       - name: Upload Wear debug APK

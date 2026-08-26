@@ -59,6 +59,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.germanchoconta.gymtracker.data.local.SetTypes
+import com.germanchoconta.gymtracker.domain.ProgressionAction
+import com.germanchoconta.gymtracker.domain.ProgressionRecommendation
 import com.germanchoconta.gymtracker.ui.management.gramsToKilogramsText
 import com.germanchoconta.gymtracker.ui.management.rirTenthsToText
 import kotlinx.coroutines.delay
@@ -70,6 +72,7 @@ private val NARROW_SET_EDITOR_WIDTH = 360.dp
 internal fun WorkoutLoggerScreen(
     state: WorkoutLoggerUiState,
     onLoadChange: (String, String) -> Unit,
+    onApplySuggestedLoad: (String) -> Unit,
     onRepsChange: (String, String) -> Unit,
     onRirChange: (String, String) -> Unit,
     onTypeChange: (String, String) -> Unit,
@@ -183,6 +186,7 @@ internal fun WorkoutLoggerScreen(
                 WorkoutExerciseCard(
                     exercise = exercise,
                     onLoadChange = onLoadChange,
+                    onApplySuggestedLoad = onApplySuggestedLoad,
                     onRepsChange = onRepsChange,
                     onRirChange = onRirChange,
                     onTypeChange = onTypeChange,
@@ -264,6 +268,7 @@ private fun RestTimerSurface(
 private fun WorkoutExerciseCard(
     exercise: WorkoutExerciseUi,
     onLoadChange: (String, String) -> Unit,
+    onApplySuggestedLoad: (String) -> Unit,
     onRepsChange: (String, String) -> Unit,
     onRirChange: (String, String) -> Unit,
     onTypeChange: (String, String) -> Unit,
@@ -309,6 +314,7 @@ private fun WorkoutExerciseCard(
                     WorkoutSetEditor(
                         set = set,
                         onLoadChange = { onLoadChange(set.id, it) },
+                        onApplySuggestedLoad = { onApplySuggestedLoad(set.id) },
                         onRepsChange = { onRepsChange(set.id, it) },
                         onRirChange = { onRirChange(set.id, it) },
                         onTypeChange = { onTypeChange(set.id, it) },
@@ -341,6 +347,7 @@ private fun WorkoutExerciseCard(
 private fun WorkoutSetEditor(
     set: WorkoutSetUi,
     onLoadChange: (String) -> Unit,
+    onApplySuggestedLoad: () -> Unit,
     onRepsChange: (String) -> Unit,
     onRirChange: (String) -> Unit,
     onTypeChange: (String) -> Unit,
@@ -396,6 +403,16 @@ private fun WorkoutSetEditor(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            if (set.type == SetTypes.WORK) {
+                set.progression?.let { recommendation ->
+                    ProgressionGuidance(
+                        recommendation = recommendation,
+                        enabled = !set.completed,
+                        onApplySuggestedLoad = onApplySuggestedLoad,
+                    )
+                }
+            }
 
             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                 val stacked = maxWidth < NARROW_SET_EDITOR_WIDTH
@@ -501,6 +518,42 @@ private fun WorkoutSetEditor(
 }
 
 @Composable
+private fun ProgressionGuidance(
+    recommendation: ProgressionRecommendation,
+    enabled: Boolean,
+    onApplySuggestedLoad: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            progressionHeadline(recommendation),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            recommendation.reason,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        recommendation.suggestedReps?.let { reps ->
+            Text(
+                "Objetivo orientativo: $reps reps",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        recommendation.suggestedLoadGrams?.let { grams ->
+            TextButton(
+                onClick = onApplySuggestedLoad,
+                enabled = enabled,
+                modifier = Modifier.minimumInteractiveComponentSize(),
+            ) {
+                Text("Aplicar ${gramsToKilogramsText(grams)} kg")
+            }
+        }
+    }
+}
+
+@Composable
 private fun ExercisePickerDialog(
     title: String,
     choices: List<WorkoutExerciseChoice>,
@@ -551,6 +604,14 @@ private fun previousLine(previous: PreviousSetUi?): String {
     if (previous == null) return "PREVIOUS • —"
     val rir = previous.rirTenths?.let { " · RIR ${rirTenthsToText(it)}" }.orEmpty()
     return "PREVIOUS • ${gramsToKilogramsText(previous.loadGrams)} kg × ${previous.reps}$rir · ${setTypeLabel(previous.type)}"
+}
+
+private fun progressionHeadline(recommendation: ProgressionRecommendation): String = when (recommendation.action) {
+    ProgressionAction.NO_BASELINE -> "PROGRESS • Crea referencia"
+    ProgressionAction.INCREASE_LOAD -> "PROGRESS • Sube carga"
+    ProgressionAction.HOLD_LOAD -> "PROGRESS • Mantén carga"
+    ProgressionAction.REDUCE_LOAD -> "PROGRESS • Reduce carga"
+    ProgressionAction.REVIEW -> "PROGRESS • Revisa contexto"
 }
 
 private fun setTypeLabel(type: String): String = when (type) {

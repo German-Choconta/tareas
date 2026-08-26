@@ -69,7 +69,7 @@ fun GymTrackerApp(
         factory = RoutineLibraryViewModel.factory(routineRepository, exerciseRepository),
     )
     val workoutViewModel: WorkoutLoggerViewModel = viewModel(
-        factory = WorkoutLoggerViewModel.factory(workoutRepository, exerciseRepository),
+        factory = WorkoutLoggerViewModel.factory(workoutRepository, exerciseRepository, historyRepository),
     )
     val historyViewModel: HistoryViewModel = viewModel(
         factory = HistoryViewModel.factory(historyRepository),
@@ -109,6 +109,7 @@ fun GymTrackerApp(
         workoutState.hasActiveWorkout -> WorkoutLoggerScreen(
             state = workoutState,
             onLoadChange = workoutViewModel::updateLoad,
+            onApplySuggestedLoad = workoutViewModel::applySuggestedLoad,
             onRepsChange = workoutViewModel::updateReps,
             onRirChange = workoutViewModel::updateRir,
             onTypeChange = workoutViewModel::updateSetType,

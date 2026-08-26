@@ -4,10 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.germanchoconta.gymtracker.data.local.ExerciseRepository
+import com.germanchoconta.gymtracker.data.local.HistoryRepository
 import com.germanchoconta.gymtracker.data.local.PreviousReferenceModes
 import com.germanchoconta.gymtracker.data.local.SetTypes
 import com.germanchoconta.gymtracker.data.local.WorkoutRepository
 import com.germanchoconta.gymtracker.data.local.WorkoutSetEntity
+import com.germanchoconta.gymtracker.domain.ProgressionEngine
+import com.germanchoconta.gymtracker.domain.ProgressionRecommendation
+import com.germanchoconta.gymtracker.domain.ProgressionTarget
 import com.germanchoconta.gymtracker.ui.management.gramsToKilogramsText
 import com.germanchoconta.gymtracker.ui.management.kilogramsToGrams
 import com.germanchoconta.gymtracker.ui.management.parseRirTenths
@@ -39,6 +43,7 @@ data class WorkoutSetUi(
     val type: String,
     val completedAt: Long?,
     val previous: PreviousSetUi? = null,
+    val progression: ProgressionRecommendation? = null,
     val loadError: String? = null,
     val repsError: String? = null,
     val rirError: String? = null,
@@ -135,6 +140,7 @@ fun hasMeaningfulIncompleteData(state: WorkoutLoggerUiState): Boolean =
 class WorkoutLoggerViewModel(
     private val workoutRepository: WorkoutRepository,
     private val exerciseRepository: ExerciseRepository,
+    private val historyRepository: HistoryRepository,
     private val now: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(WorkoutLoggerUiState())
@@ -179,6 +185,13 @@ class WorkoutLoggerViewModel(
         updateSetUi(setId) { it.copy(loadText = text, loadError = error) }
         val grams = WorkoutInputValidation.loadGrams(text) ?: return
         persistLatest("$setId:load") { workoutRepository.updateSetLoad(setId, grams) }
+    }
+
+    fun applySuggestedLoad(setId: String) {
+        val set = findSet(setId) ?: return
+        if (set.completed || set.type != SetTypes.WORK) return
+        val suggested = set.progression?.suggestedLoadGrams ?: return
+        updateLoad(setId, gramsToKilogramsText(suggested))
     }
 
     fun updateReps(setId: String, text: String) {
@@ -397,6 +410,22 @@ class WorkoutLoggerViewModel(
                 routineId = workout.routineId,
                 beforeStartedAt = workout.startedAt,
             ).associateBy(WorkoutSetEntity::position)
+            val progressionTarget = progressionTarget(
+                repMin = item.exercise.repMin,
+                repMax = item.exercise.repMax,
+                targetRirTenths = item.exercise.targetRirTenths,
+                loadIncrementGrams = item.exercise.loadIncrementGrams,
+            )
+            val progressionObservations = if (progressionTarget == null) {
+                emptyList()
+            } else {
+                historyRepository.progressionObservations(
+                    exerciseId = item.exercise.exerciseId,
+                    referenceMode = referenceMode,
+                    routineId = workout.routineId,
+                    beforeStartedAt = workout.startedAt,
+                )
+            }
             WorkoutExerciseUi(
                 id = item.exercise.id,
                 exerciseId = item.exercise.exerciseId,
@@ -422,6 +451,13 @@ class WorkoutLoggerViewModel(
                         type = set.type,
                         completedAt = set.completedAt,
                         previous = previous,
+                        progression = progressionTarget?.let { target ->
+                            ProgressionEngine.recommend(
+                                setPosition = set.position,
+                                observations = progressionObservations,
+                                target = target,
+                            )
+                        },
                     )
                 },
             )
@@ -439,6 +475,18 @@ class WorkoutLoggerViewModel(
             exerciseChoices = loadExerciseChoices(includedExerciseIds),
             message = _uiState.value.message,
         )
+    }
+
+    private fun progressionTarget(
+        repMin: Int?,
+        repMax: Int?,
+        targetRirTenths: Int?,
+        loadIncrementGrams: Long?,
+    ): ProgressionTarget? {
+        if (repMin == null || repMax == null || loadIncrementGrams == null) return null
+        if (repMin <= 0 || repMax < repMin || loadIncrementGrams <= 0L) return null
+        if (targetRirTenths != null && targetRirTenths !in 0..100) return null
+        return ProgressionTarget(repMin, repMax, targetRirTenths, loadIncrementGrams)
     }
 
     private suspend fun loadExerciseChoices(excludedIds: Set<String>): List<WorkoutExerciseChoice> =
@@ -469,10 +517,11 @@ class WorkoutLoggerViewModel(
         fun factory(
             workoutRepository: WorkoutRepository,
             exerciseRepository: ExerciseRepository,
+            historyRepository: HistoryRepository,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                WorkoutLoggerViewModel(workoutRepository, exerciseRepository) as T
+                WorkoutLoggerViewModel(workoutRepository, exerciseRepository, historyRepository) as T
         }
     }
 }

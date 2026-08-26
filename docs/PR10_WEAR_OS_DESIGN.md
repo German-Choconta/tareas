@@ -6,19 +6,19 @@ Product loop remains **LOG → COMPARE → UNDERSTAND → PROGRESS**. The workou
 
 ## 1. Verified baseline and non-negotiable boundary
 
-Issue #10 starts from `main` `b39f6ee60b7f9fd9e37a445df9d39eb1958854e8` after Issue #9 / PR #18 was merged and its documentation-head Android CI #203 passed.
+Issue #10 started from verified `main` `b39f6ee60b7f9fd9e37a445df9d39eb1958854e8`, after Issue #9 / PR #18 was merged and its documentation-head Android CI #203 passed.
 
-Phone Room remains the only canonical workout/history truth. `WorkoutSet` remains the canonical set record. Wear OS can temporarily retain a minimal active-workout snapshot and pending user operations so an interrupted connection cannot lose a set, but that temporary state is a delivery/recovery mechanism, not an independent historical database.
+Phone Room remains the only canonical workout/history truth. `WorkoutSet` remains the canonical set record. Wear OS may retain only a minimal active-workout snapshot plus pending delivery operations required to survive connectivity loss, process death, or restart. That state is a delivery/recovery mechanism, not independent historical truth.
 
-Issue #10 requires **no Room schema change**. Database version remains 2 and only committed schemas v1/v2 remain valid. There is no Wear table and no schema v3.
+Issue #10 requires **no Room schema change**. Database version remains 2 and only committed schemas v1/v2 remain valid. There is no Wear Room table and no schema v3.
 
 Health Connect is orthogonal to Wear sync. PR10 adds no Health Connect permission, write, background/history access, exercise-session import, recovery score, or persistence.
 
-Portable backup/restore and CSV stay unchanged. Wear delivery state is intentionally outside canonical Room and outside backup/CSV.
+Portable backup/restore and CSV remain unchanged. Wear delivery state is intentionally outside canonical Room and outside backup/CSV.
 
 ## 2. Official Android/Wear research used for the design
 
-Primary Android/Google guidance checked at implementation time:
+Primary Android/Google guidance checked during implementation:
 
 - Wear OS Data Layer overview and clients: https://developer.android.com/training/wearables/data/overview
 - Sync data items with DataClient: https://developer.android.com/training/wearables/data/data-items
@@ -29,232 +29,203 @@ Primary Android/Google guidance checked at implementation time:
 - Package/distribute Wear OS apps: https://developer.android.com/training/wearables/apps/packaging
 - Standalone/non-standalone Wear apps: https://developer.android.com/training/wearables/apps/standalone-apps
 - Compose for Wear OS: https://developer.android.com/training/wearables/compose
+- Material 3 for Wear OS: https://developer.android.com/training/wearables/compose/material3
 - Wear OS accessibility: https://developer.android.com/training/wearables/accessibility
 - Wear OS testing: https://developer.android.com/training/wearables/apps/testing
 
-The current Data Layer dependency documented by Google is `com.google.android.gms:play-services-wearable:20.0.1`.
+Current Google Play Services wearable dependency used by PR10: `com.google.android.gms:play-services-wearable:20.0.1`.
 
 ### API choices
 
-`DataClient` is the durable transport primitive for state and pending-operation journal delivery. Data items can be written while devices are disconnected and synchronize after connectivity returns. The watch still keeps its own pending-operation copy because Google explicitly warns that Data Layer synchronization is not a replacement for app storage.
+`DataClient` is the durable transport primitive for snapshot/request/journal DataItems. DataItems can be written while devices are disconnected and synchronize after connectivity returns. The watch still persists its pending journal locally because Data Layer synchronization is not application storage.
 
-`MessageClient` is **not** the correctness path: messages require connected nodes and are not persisted/retried. It may be useful for future transient hints, but PR10 does not need it.
-
-`ChannelClient` is not needed: payloads are small structured state, not files or long byte streams.
-
-`CapabilityClient` is used only for reachability/installed-feature UX. It does not decide truth and a temporarily unreachable phone never blocks local wrist logging.
-
-`NodeClient` is not needed for normal protocol routing because capability discovery is more precise than assuming every connected Android node has GymTracker.
+`MessageClient` is **not** a correctness path: messages require connected nodes and are not a persistent retry queue. `ChannelClient` is unnecessary because PR10 exchanges small structured payloads rather than files/streams. `CapabilityClient` is used only for reachability/installed-companion UX and never decides canonical truth. `NodeClient` is not needed for normal protocol routing.
 
 ## 3. Minimal Data Layer contract
 
-All Data Layer payloads are versioned JSON shared by the phone and watch through a small protocol module. The active-workout payload remains well below the DataItem limit; no Assets are needed.
+All Data Layer payloads are versioned JSON shared by phone and watch through `:wear-protocol`.
 
 Reserved paths:
 
-- `/gymtracker/workout/request` — watch asks the phone to republish current canonical active-workout state; includes a changing request nonce so repeated requests generate an event.
-- `/gymtracker/workout/journal` — ordered watch pending-operation journal plus a changing delivery nonce.
-- `/gymtracker/workout/snapshot` — phone-published canonical active-workout snapshot plus deterministic results for handled watch operations.
+- `/gymtracker/workout/request` — watch asks phone to republish current canonical active-workout state; a changing nonce makes repeated requests observable.
+- `/gymtracker/workout/journal` — ordered watch pending-operation journal plus delivery nonce.
+- `/gymtracker/workout/snapshot` — phone-published canonical active-workout snapshot plus terminal results for handled watch operations.
 
-Each write is urgent because it is driven by an active workout interaction. Correctness does not depend on an exact delivery latency.
+Writes are urgent because they originate from an active workout interaction. Correctness never depends on a particular delivery latency.
 
-### Why one journal DataItem instead of one DataItem per mutation
+### Why one journal DataItem
 
-A single journal represents the watch's ordered pending state. If intermediate Data Layer changes are coalesced or delivered after reconnection, the newest journal still contains every operation that has not yet been acknowledged. The phone processes journal operations in sequence order. The watch removes an operation only after a phone snapshot reports a terminal result for that exact operation ID.
+The journal represents all watch operations that have not received a terminal phone result. If intermediate Data Layer changes are coalesced, the newest journal still contains every unacknowledged operation. The phone sorts operations by watch sequence before handling them. The watch removes an operation only after a phone snapshot includes a terminal result for that exact `operationId`.
 
-The watch also persists this journal locally. Process death or a watch restart therefore reconstructs pending operations and republishes them instead of silently dropping them.
+The watch persists snapshot, pending journal, and next sequence in DataStore. Process death or watch restart therefore reconstructs pending intent and republishes it instead of silently dropping it.
 
 ## 4. Snapshot: only what the wrist needs
 
-The phone publishes only the active workout, never History/Progress/Backup/Health Connect data.
+Phone publishes only the active workout, never History/Progress/Backup/Health Connect data.
 
-Snapshot fields include:
+Snapshot data includes:
 
-- protocol version and server-generated snapshot revision/nonce;
-- active workout ID/title/start time or explicit `NO_ACTIVE_WORKOUT`;
+- protocol version and snapshot nonce;
+- active workout ID/title/start time or explicit no-active state;
 - canonical rest-timer absolute end timestamp and owning workout-exercise ID;
-- ordered active workout exercises with ID, display name, position and target snapshot (set count, rep range, target RIR, rest seconds, load increment, previous-reference mode);
+- ordered active workout exercises with stable IDs, display name, position and target snapshot;
 - ordered sets with stable canonical set ID, position, type, grams, reps, optional RIR tenths and completion timestamp;
-- PREVIOUS values by matching set position, derived using the unchanged PR4 previous-reference contract;
-- operation results keyed by operation ID.
+- PREVIOUS values matched by set position and derived with unchanged PR4 previous-reference semantics;
+- operation results keyed by `operationId`.
 
-The watch derives the current exercise/set as the first incomplete set after applying its still-pending local operations as an overlay. It does not maintain an independent history database.
+The watch derives current exercise/set from canonical snapshot plus its still-pending local overlay. It never maintains independent history.
 
 ## 5. Watch operation contract
 
-A watch operation contains:
+Each operation contains:
 
 - stable random `operationId`;
 - monotonic watch-local `sequence`;
 - `workoutId` and stable `setId`;
-- operation kind / explicit changed fields;
-- expected value for every field the operation changes;
-- desired value for every field the operation changes;
-- for completion, the immutable user-action `completedAt` timestamp selected when the operation is created.
+- operation kind / explicitly changed field;
+- `expectedValue` and `desiredValue` for that field;
+- for completion, the immutable user-action `completedAt` selected when the operation is created.
 
 Supported PR10 mutations are only:
 
 - edit load;
 - edit reps;
 - edit/clear optional RIR;
-- complete the current set.
+- complete current set.
 
-Set type, exercise/routine editing, notes, History, Progress, Backup, Health Connect and workout finish remain phone-only in PR10.
+Set type, notes, exercise/routine editing, History, Progress, Backup, Health Connect, and workout finish remain phone-only.
 
-### Validation
+Phone validation preserves logger ranges: non-negative grams, reps 0–1000 for editing and >0 for completion, RIR null or 0–100 tenths. Missing/wrong/finished targets are rejected. Replay never regenerates a completion timestamp.
 
-The phone applies the same canonical ranges as the logger: non-negative grams, reps 0–1000 for editing and >0 for completion, RIR null or 0–100 tenths. Operations targeting a missing set, wrong workout or finished workout are rejected. A completion timestamp must be valid for the active workout and is never regenerated on replay.
+## 6. Idempotency, ordering, receipts, and conflicts
 
-## 6. Idempotency, ordering and conflict rules
+There is deliberately no clock-based or arbitrary last-write-wins rule.
 
-There is deliberately no arbitrary last-write-wins clock rule.
+For each mutation the phone executes against canonical Room state:
 
-For each operation, the phone executes a Room transaction:
+1. If the operation has a durable terminal receipt for the current active workout, return that exact prior result without reapplying it.
+2. Otherwise, if the changed canonical value already equals `desiredValue`, treat replay as idempotent `APPLIED`.
+3. Otherwise, if the canonical value equals `expectedValue`, apply only the requested field transactionally and return `APPLIED`.
+4. Otherwise return `CONFLICT` and do not overwrite phone truth.
 
-1. Load current active workout/set.
-2. If every changed field already equals the operation's desired value, return `APPLIED`/idempotent success without duplicating anything.
-3. Otherwise, if every changed field still equals the operation's expected value, apply only those fields atomically and return `APPLIED`.
-4. Otherwise return `CONFLICT` and do not overwrite canonical phone state.
+Only the explicitly changed field participates in conflict detection. A phone edit to reps therefore does not prevent a watch load-only edit. Same-field stale changes are rejected deterministically rather than silently overwriting canonical state.
 
-Only fields explicitly changed by the watch participate in conflict detection. Therefore a phone edit to reps does not prevent a watch load-only operation, and a watch completion does not overwrite concurrent phone load/reps/RIR edits.
+### Durable phone operation receipts
 
-The phone processes one watch journal in ascending sequence order. Duplicate journal delivery is safe because operation IDs/results and expected/desired comparison make the operation idempotent. A stale/out-of-order journal cannot roll canonical values backward through blind writes.
+Expected/desired comparison alone is insufficient for one lost-ACK case: operation A can be applied, operation B can later change the same field, and a replay of A could otherwise look stale even though A already succeeded.
 
-Terminal result examples:
+To close that case without adding schema v3, phone stores a tiny terminal-receipt file using `AtomicFile` under `noBackupFilesDir`:
 
-- `APPLIED` — canonical state now reflects the operation (including a duplicate replay that was already applied);
-- `CONFLICT` — same field changed elsewhere; canonical phone state wins and the watch surfaces that it refreshed instead of silently overwriting;
-- `REJECTED` — invalid/stale target such as finished/no active workout.
+- key: `operationId`;
+- metadata: active `workoutId`, terminal `APPLIED` / `CONFLICT` / `REJECTED`, and optional protocol reason;
+- explicitly **not stored**: load, reps, RIR, completion timestamps, exercise/workout names, notes, health data, or canonical workout state.
 
-The watch retains pending operations until a terminal result is received. After terminal results, it removes those operations and uses the newly published canonical snapshot as its base.
+Receipts are delivery metadata only. They are not Room truth, are excluded from Android backup by location, never enter GymTracker portable backup/restore or CSV, and are pruned when the active workout changes or ends.
+
+This makes duplicate/lost-ACK replay deterministic across phone process death or restart while keeping Room version 2.
+
+Terminal result meanings:
+
+- `APPLIED` — canonical state reflects the operation, including replay of an already-applied operation;
+- `CONFLICT` — same field changed elsewhere; canonical phone state wins and watch refreshes;
+- `REJECTED` — invalid/stale target such as no active or finished workout.
 
 ## 7. Completion and rest timer
 
-The existing phone contract remains canonical:
+Existing phone semantics remain canonical:
 
 - `WorkoutSet.completedAt` is completion truth.
-- A successful completion starts rest by writing `Workout.restTimerEndsAt = completedAt + restSeconds * 1000` and the owning workout-exercise ID.
+- Successful completion writes `Workout.restTimerEndsAt = completedAt + restSeconds * 1000` plus owning workout-exercise ID.
 - Remaining time is derived as `endsAt - now`; there is no second ticking timer database.
 
-When a watch completes a set offline, its durable completion operation contains the original `completedAt`. The watch can immediately derive a provisional rest end from that timestamp plus the already-snapshotted rest duration. On reconnection the phone replays that exact completion timestamp through the canonical transaction and publishes the canonical absolute rest end.
+When watch completes offline, its durable operation keeps the original `completedAt`. Watch may derive a provisional rest end from that timestamp plus snapshotted rest duration. On reconnection phone applies/replays the same immutable timestamp and publishes canonical rest state.
 
-A duplicate completion cannot create a second set or restart rest with a new time because replay never invents a new completion timestamp.
+A duplicate completion cannot create a second set or restart rest with a new time. If phone later stops its canonical timer, replay of an already-receipted completion returns the previous result instead of rerunning completion side effects.
 
-Stopping/editing the timer is not added to PR10 because the real issue only requires the rest timer to be usable/visible at the wrist and the phone already owns timer state. The watch displays the timer and completion-derived offline timer without introducing a second timer truth.
+PR10 does not add timer editing/stopping on the watch.
 
 ## 8. Connectivity and lifecycle behavior
 
 ### Connected
 
-Watch receives/pulls snapshot, edits locally, persists operation to its outbox first, publishes journal, phone applies transaction, and phone republishes snapshot/result. UI can optimistically show the operation while clearly tracking pending sync.
+Watch persists intent locally first, publishes journal, phone applies against Room, phone publishes canonical snapshot/result, and watch removes only terminally acknowledged operations.
 
-### Watch loses connection before/during a set
+### Watch loses connection
 
-The last active-workout snapshot remains on device. A mutation is appended to local durable outbox before network delivery is attempted. The workout interaction continues without the phone.
+Last active snapshot remains usable. New mutations are appended to local DataStore before delivery is attempted. Wrist logging therefore continues without making watch a second canonical database.
 
 ### Reconnection
 
-The watch republishes the complete pending journal. Phone processes in sequence and publishes results + canonical snapshot. The watch clears only acknowledged terminal operations.
+Watch republishes the complete unacknowledged journal. Phone processes by sequence and publishes terminal results + canonical snapshot.
 
 ### Duplicate/out-of-order delivery
 
-Handled by stable operation IDs, one ordered pending journal, field-level expected/desired compare, and transactional phone application.
+Stable operation IDs, durable terminal receipts, sequence ordering, and expected/desired conflict checks prevent duplicate side effects and blind rollback.
 
 ### Phone process death/restart
 
-`WearableListenerService` can receive Data Layer changes without the UI process already running. Canonical truth is loaded from Room. No in-memory ack ledger is required for correctness.
+`WearableListenerService` receives Data Layer events without phone UI running. Room restores canonical workout truth and the `noBackupFilesDir` receipt store restores terminal delivery knowledge for the current active workout.
 
 ### Watch process death/restart
 
-Pending journal is reloaded from local DataStore; DataClient's last snapshot is queried; journal/request are republished as needed. No set action is lost merely because the Activity/ViewModel died.
+DataStore restores cached snapshot, pending journal, and sequence. The app republishes pending journal/request as needed.
 
 ### Phone edit while watch is stale
 
-A different-field edit is preserved and compatible. A same-field edit causes deterministic `CONFLICT`; the phone's canonical value is shown after refresh. No silent last-write-wins overwrite occurs.
+Different-field changes remain mergeable. Same-field changes produce explicit `CONFLICT`; phone canonical value wins.
 
 ### No active workout
 
-The phone publishes an explicit no-active state. The watch shows a simple prompt to start/continue a workout on the phone. It does not expose the routine editor.
+Watch shows a minimal start/resume-on-phone state and does not expose a routine editor or invent a workout.
 
 ### Phone temporarily unavailable
 
-If a cached active workout exists, watch logging remains available and pending operations are visibly marked as saved locally/pending sync. If no cached active workout exists, the watch cannot invent one and shows that the phone is temporarily required to load/start a workout.
+With a cached active workout, watch may continue recording locally pending intent. Without cached active state, it waits for phone state rather than inventing truth.
 
 ## 9. Phone transaction boundary
 
-PR10 adds transactional repository/DAO support for watch operations but no entity/table/column. The operation handler is an adapter into the existing `WorkoutRepository`/Room truth.
+PR10 adds synchronization adapters around the existing Room aggregate but no entity/table/column. Phone never trusts watch snapshot as truth; IDs only address an already-existing active workout/set. Historical workouts are not mutable through Wear.
 
-The phone never trusts the watch snapshot as truth. IDs are used only to address an already-existing active workout/set. Historical workouts are not mutable through Wear.
+The PR4 phone logger remains fully functional with the Wear module absent or no watch connected.
 
-The PR4 logger remains fully functional with the Wear module uninstalled and without a connected watch.
+## 10. Wrist-first Material 3 UI
 
-## 10. Wrist-first UI
-
-The Wear UI is intentionally one task-focused surface:
+Wear UI is intentionally one task-focused surface:
 
 - exercise name and set number;
-- compact PREVIOUS / TARGET / TODAY context;
-- large controls to adjust load and reps without typing;
-- optional RIR controls including clear/not-set;
-- one prominent Complete set action;
-- rest timer after completion;
-- concise connected / saved-offline / syncing / conflict state only when useful;
-- after all current sets are complete, direct the user to finish/manage the workout on the phone.
+- compact PREVIOUS / TARGET / TODAY;
+- large load and reps controls without typing;
+- optional RIR controls including clear;
+- prominent Complete set action;
+- rest timer;
+- concise connected / saved-offline / syncing / conflict status;
+- all-sets-complete state that directs finish/manage actions to phone.
 
-No charts, full History, full Progress, routine editor, exercise library, backup, recovery UI or large settings surface.
+No charts, full History, full Progress, routine editor, exercise library, backup, recovery UI, or broad settings surface.
 
-Wear-specific Compose Material 3 components are used rather than shrinking phone Material widgets. Layout is designed for round/small watch screens with readable numbers, semantics/content descriptions and large touch targets.
+The implementation uses current Wear Material 3 patterns, including `ScreenScaffold` and `TransformingLazyColumn`, instead of shrinking phone widgets or using the older Material `ScalingLazyColumn` pattern. Primary +/- controls are 52 dp and Complete is at least 56 dp with explicit semantics/content descriptions.
 
 ## 11. Packaging
 
-A dedicated Wear application module is packaged with the same application ID as the phone app, a unique version code, and required `android.hardware.type.watch` feature. It is marked **non-standalone** because the phone/Room app is the source of truth and starting/managing the workout remains a phone responsibility. The Wear app still works through connectivity interruptions once it has an active-workout snapshot.
+A dedicated Wear application module uses the same application ID as the phone app, a unique version code, and required `android.hardware.type.watch` feature. It is **non-standalone** because phone/Room is canonical truth and starting/managing workouts remains a phone responsibility. Cached active-workout logging still tolerates temporary disconnects.
 
-The phone advertises a GymTracker workout-sync capability; the watch uses capability reachability for connection UX and never assumes that any arbitrary Android node is the canonical companion.
+Phone advertises GymTracker workout-sync capability; watch uses capability reachability only for connection UX.
 
 ## 12. Test contract
 
 All fixtures are synthetic and non-identifying.
 
-Protocol/JVM tests cover:
+Shared/JVM coverage includes protocol version/paths, serialization, pending-operation projection/order, current-set advancement, offline rest derivation, and no-active state.
 
-- serialization/version/path contract;
-- deterministic ordered journal processing;
-- expected/desired idempotency;
-- duplicate replay;
-- stale same-field conflict;
-- independent-field merge;
-- out-of-order/stale journal behavior;
-- completion replay and unchanged timestamp;
-- no duplicate set creation.
+Phone/Room instrumentation covers active/no-active snapshots, PREVIOUS/TARGET mapping, load/reps/RIR edits, completion, canonical rest end, duplicate replay, stale conflict, independent-field merge, no duplicate completion side effects, and durable receipt recreation.
 
-Phone/Room instrumentation covers:
+Wear instrumentation covers no-active UI, current exercise/set + PREVIOUS/TARGET/TODAY, large action semantics and scrollability on a small round display, plus DataStore outbox restoration and terminal-result clearing across store recreation.
 
-- active/no-active workout snapshot;
-- PREVIOUS/TARGET mapping;
-- edit load/reps/RIR;
-- complete set;
-- rest timer canonical end;
-- duplicate operation;
-- conflict/rejection;
-- persistence across repository/process recreation;
-- existing mobile behavior without Wear.
-
-Wear tests cover:
-
-- no active workout;
-- current exercise/set and PREVIOUS/TARGET/TODAY;
-- load/reps/RIR adjustments;
-- complete set and rest timer;
-- locally queued offline operation;
-- pending journal restoration/replay;
-- conflict/sync status;
-- small watch layout and accessibility semantics where emulator support permits.
-
-No CI test needs a physical watch, real phone/watch pairing or personal workout data.
+No CI test requires a physical watch, real pairing, real workout data, or personal health data.
 
 ## 13. CI contract
 
-All existing hardened mobile gates remain mandatory and unchanged in meaning:
+All existing hardened mobile gates remain mandatory:
 
 1. mobile JVM tests;
 2. semantic Room schema verification;
@@ -266,15 +237,19 @@ All existing hardened mobile gates remain mandatory and unchanged in meaning:
 8. mobile debug artifact;
 9. mobile release artifact.
 
-PR10 adds narrow Wear gates instead of replacing mobile gates:
+PR10 adds, rather than replaces, Wear gates:
 
 - shared protocol JVM tests;
 - Wear JVM tests;
-- Wear lint/build;
-- Wear API 35 emulator instrumentation where stable in hosted CI;
-- Wear debug/release APK build and Wear artifacts.
+- Wear/protocol lint;
+- Wear connected UI/restart instrumentation on a hosted API 34 `android-wear` x86_64 small-round emulator;
+- Wear debug APK;
+- minified/resource-shrunk Wear release APK;
+- Wear debug/release artifacts.
 
-The Room schema snapshot check must continue to prove that v1/v2 are semantically unchanged.
+API 35 remains mandatory for the pre-existing **mobile** connected gate. API 34 is used for the dedicated Wear emulator because it is a stable hosted Wear system image for this CI lane; this does not weaken or replace the mobile API 35 contract.
+
+The Room schema snapshot check must continue to prove v1/v2 semantically unchanged.
 
 ## 14. Explicit non-goals / safety audit checklist
 
@@ -282,12 +257,12 @@ PR10 must not:
 
 - touch Pulso / pulso-finanzas;
 - add cloud/backend/account requirements;
-- create schema v3 without a demonstrated need (none exists in this design);
-- persist a second canonical workout/history database on the watch;
-- alter PR4 PREVIOUS/TARGET/TODAY, set types, finish semantics or canonical rest behavior;
+- create schema v3 without a demonstrated need (none exists);
+- persist a second canonical workout/history database on watch;
+- alter PR4 PREVIOUS/TARGET/TODAY, set types, finish semantics, or canonical rest behavior;
 - alter PR5 PR/Epley/heaviest/reps-at-load/volume rules;
 - alter PR6 analytics/progression semantics;
-- alter PR7 backup/restore/CSV format;
+- alter PR7 portable backup/restore/CSV format;
 - alter PR9 Health Connect permissions or data boundary;
-- commit real workout/health data, device logs, credentials, secrets or identifying fixtures;
+- commit real workout/health data, device logs, credentials, secrets, or identifying fixtures;
 - add health/workout analytics telemetry.

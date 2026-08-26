@@ -149,7 +149,27 @@ fun WearWorkoutScreen(
                         style = MaterialTheme.typography.labelLarge,
                     )
                 }
-                item { PreviousTargetToday(current) }
+                item {
+                    Text(
+                        "PREVIOUS  ${formatPrevious(current.set.previous)}",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+                item {
+                    Text(
+                        "TARGET  ${formatTarget(current)}",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+                item {
+                    Text(
+                        "TODAY  ${formatToday(current.set)}",
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
                 item {
                     NumericControl(
                         label = "Load",
@@ -216,24 +236,6 @@ private fun SyncStatus(uiState: WearWorkoutUiState) {
 }
 
 @Composable
-private fun PreviousTargetToday(current: WearCurrentSetContext) {
-    val previous = current.set.previous
-    val target = buildString {
-        val min = current.exercise.repMin
-        val max = current.exercise.repMax
-        if (min != null && max != null) append("$min–$max reps")
-        current.exercise.targetRirTenths?.let {
-            if (isNotEmpty()) append(" • ")
-            append("RIR ${formatRir(it)}")
-        }
-        if (isEmpty()) append("—")
-    }
-    Text("PREVIOUS  ${formatPrevious(previous)}", textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
-    Text("TARGET  $target", textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
-    Text("TODAY  ${formatToday(current.set)}", textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall)
-}
-
-@Composable
 private fun NumericControl(
     label: String,
     value: String,
@@ -279,6 +281,17 @@ private fun RestTimer(endsAt: Long) {
 private fun formatPrevious(previous: WearPreviousSetSnapshot?): String = previous?.let {
     "${formatKg(it.loadGrams)} kg × ${it.reps}${it.rirTenths?.let { rir -> " • RIR ${formatRir(rir)}" }.orEmpty()}"
 } ?: "—"
+
+private fun formatTarget(current: WearCurrentSetContext): String = buildString {
+    val min = current.exercise.repMin
+    val max = current.exercise.repMax
+    if (min != null && max != null) append("$min–$max reps")
+    current.exercise.targetRirTenths?.let {
+        if (isNotEmpty()) append(" • ")
+        append("RIR ${formatRir(it)}")
+    }
+    if (isEmpty()) append("—")
+}
 
 private fun formatToday(set: WearSetSnapshot): String =
     "${formatKg(set.loadGrams)} kg × ${set.reps}${set.rirTenths?.let { " • RIR ${formatRir(it)}" }.orEmpty()}"

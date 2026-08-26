@@ -20,17 +20,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLocale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.health.connect.client.contracts.HealthPermissionsRequestContract
+import com.germanchoconta.gymtracker.PRIVACY_POLICY_URL
 import com.germanchoconta.gymtracker.data.health.RecoveryAvailability
 import com.germanchoconta.gymtracker.data.health.RecoveryContext
 import com.germanchoconta.gymtracker.data.health.RecoveryHrvRmssd
@@ -69,6 +72,7 @@ internal fun RecoveryContextScreen(
     onRefresh: () -> Unit,
     onDisconnect: () -> Unit,
 ) {
+    val uriHandler = LocalUriHandler.current
     Scaffold(
         topBar = {
             TopAppBar(
@@ -185,11 +189,21 @@ internal fun RecoveryContextScreen(
             }
 
             item(key = "privacy-bottom") {
-                Text(
-                    "PR9 no guarda estos registros en Room, no los incluye en backup/CSV, no los escribe en Health Connect y no solicita acceso en segundo plano ni historial ampliado.",
+                Column(
                     modifier = Modifier.padding(bottom = 24.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        "PR9 no guarda estos registros en Room, no los incluye en backup/CSV, no los escribe en Health Connect y no solicita acceso en segundo plano ni historial ampliado.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    TextButton(
+                        onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) },
+                        modifier = Modifier.minimumInteractiveComponentSize(),
+                    ) {
+                        Text("Política de privacidad")
+                    }
+                }
             }
         }
     }

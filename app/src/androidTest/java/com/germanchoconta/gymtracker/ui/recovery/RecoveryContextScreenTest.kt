@@ -96,6 +96,7 @@ class RecoveryContextScreenTest {
         assertTextReachable("HRV (RMSSD)")
         assertTextReachable("RMSSD; no se mezcla", substring = true)
         assertTextReachable("Desconectar")
+        assertTextReachable("Política de privacidad")
         composeRule.onRoot().tryPerformAccessibilityChecks()
     }
 

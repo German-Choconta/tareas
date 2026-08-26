@@ -11,8 +11,8 @@ android {
         applicationId = "com.germanchoconta.gymtracker"
         minSdk = 30
         targetSdk = 36
-        versionCode = 10_001
-        versionName = "1.0.0-rc1"
+        versionCode = 10_002
+        versionName = "1.0.0-rc2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

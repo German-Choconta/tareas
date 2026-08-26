@@ -110,8 +110,8 @@ jobs:
 
           PHONE_BADGING="$("$AAPT2" dump badging "$PHONE_APK" | head -n 1)"
           WEAR_BADGING="$("$AAPT2" dump badging "$WEAR_APK" | head -n 1)"
-          echo "$PHONE_BADGING" | grep -F "package: name='com.germanchoconta.gymtracker' versionCode='1' versionName='1.0.0-rc1'"
-          echo "$WEAR_BADGING" | grep -F "package: name='com.germanchoconta.gymtracker' versionCode='10001' versionName='1.0.0-rc1'"
+          echo "$PHONE_BADGING" | grep -F "package: name='com.germanchoconta.gymtracker' versionCode='2' versionName='1.0.0-rc2'"
+          echo "$WEAR_BADGING" | grep -F "package: name='com.germanchoconta.gymtracker' versionCode='10002' versionName='1.0.0-rc2'"
 
           if "$APKSIGNER" verify "$PHONE_APK"; then
             echo "Phone release APK unexpectedly contains a distribution signature."
@@ -123,10 +123,10 @@ jobs:
           fi
 
           {
-            echo "release_candidate=1.0.0-rc1"
+            echo "release_candidate=1.0.0-rc2"
             echo "application_id=com.germanchoconta.gymtracker"
-            echo "phone_version_code=1"
-            echo "wear_version_code=10001"
+            echo "phone_version_code=2"
+            echo "wear_version_code=10002"
             echo "phone_release_apk_signed=false"
             echo "wear_release_apk_signed=false"
             echo "phone_aab_signed=false"

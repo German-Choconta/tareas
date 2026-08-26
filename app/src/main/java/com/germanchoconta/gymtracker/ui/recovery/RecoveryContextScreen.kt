@@ -25,6 +25,7 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -38,7 +39,6 @@ import com.germanchoconta.gymtracker.data.health.RecoveryRestingHeartRate
 import com.germanchoconta.gymtracker.data.health.RecoverySleepSession
 import java.time.Duration
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun RecoveryContextRoute(
@@ -320,7 +320,7 @@ private fun RestingHeartRateCard(record: RecoveryRestingHeartRate, context: Reco
 private fun HrvCard(record: RecoveryHrvRmssd, context: RecoveryContext) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(String.format(Locale.getDefault(), "%.1f ms", record.milliseconds), style = MaterialTheme.typography.titleMedium)
+            Text(String.format(LocalLocale.current.platformLocale, "%.1f ms", record.milliseconds), style = MaterialTheme.typography.titleMedium)
             Text(
                 "RMSSD; no se mezcla con SDNN u otras métricas · ${formatTime(record.time, context)} · ${sourceLabel(record.sourcePackage)}",
                 style = MaterialTheme.typography.bodySmall,

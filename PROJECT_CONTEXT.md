@@ -1,7 +1,7 @@
 # GymTracker — Project Context & Continuity
 
 > Canonical handoff. Read this first in every GymTracker session, then verify everything directly in GitHub. **GitHub is the source of truth if this file is stale.**
-> Last updated: 2026-08-25 (America/Bogota), during Issue #10 / PR #19 implementation.
+> Last updated: 2026-08-26 (America/Bogota), after Issue #10 / PR #19 merge and successful post-merge validation.
 
 ## Repository and permanent rules
 
@@ -17,78 +17,123 @@
 
 Core V1 (PR1–PR8) is completed/release-ready under the repository contract. Do not reopen or change those semantics without a concrete, reproducible regression.
 
-Issue #9 / PR #18 is also completely closed and was reverified directly in GitHub before Issue #10 work began:
+Issue #9 / PR #18 — Health Connect recovery context — is also completely closed:
 
-- PR #18 — `GymTracker PR 9: Health Connect recovery context` — MERGED/CLOSED.
 - Final PR head: `84a4107ff53b56364780ad8c92e54d88f3de5420`.
-- Final exact-head Android CI: run `32924890756` (#201) — SUCCESS.
-- PR artifacts:
-  - `gymtracker-room-schema` — `9591172894`
-  - `gymtracker-debug-apk` — `9591318921`
-  - `gymtracker-release-apk` — `9591319691`
-- Squash merge/main commit: `5136ce2a3939c691f8d6ab81f4e102e63ca52481`.
+- Final PR CI: run `32924890756` (#201) — SUCCESS.
+- Squash/main merge: `5136ce2a3939c691f8d6ab81f4e102e63ca52481`.
 - Issue #9 — CLOSED / COMPLETED.
-- Post-merge main CI: run `32926429035` (#202) — SUCCESS.
-- Post-merge artifacts:
-  - `gymtracker-room-schema` — `9591706046`
-  - `gymtracker-debug-apk` — `9591852116`
-  - `gymtracker-release-apk` — `9591852485`
-- Final Issue #9 documentation head on main: `b39f6ee60b7f9fd9e37a445df9d39eb1958854e8` — `Document final Issue 9 closure`.
-- Documentation-head CI: run `32927064134` (#203) — SUCCESS.
-- Documentation-head artifacts:
-  - `gymtracker-room-schema` — `9591907058`
-  - `gymtracker-debug-apk` — `9591966376`
-  - `gymtracker-release-apk` — `9591967052`
+- Post-merge CI: `32926429035` (#202) — SUCCESS.
+- Final Issue #9 documentation head: `b39f6ee60b7f9fd9e37a445df9d39eb1958854e8`.
+- Documentation-head CI: `32927064134` (#203) — SUCCESS.
 
-Issue #10 was branched from exact main `b39f6ee60b7f9fd9e37a445df9d39eb1958854e8` only after all of the above was verified.
+Issue #10 branched from exact verified main `b39f6ee60b7f9fd9e37a445df9d39eb1958854e8`.
 
-## Current stage — Issue #10 / PR #19
+## Issue #10 / PR #19 — FINAL CLOSED STATE
 
-Real Issue #10: **Post-V1 — Wear OS workout companion**.
-
-Goal: minimal wrist-first active-workout companion so sets can be logged without repeatedly using the phone.
-
-Current GitHub state at this handoff update:
-
-- Branch: `feat/wear-os-workout-companion`.
-- PR #19: `GymTracker PR 10: Wear OS workout companion`.
-- PR #19 is intentionally **DRAFT**.
-- Base: `main` at the verified Issue #9 documentation head.
-- Implementation head immediately before this documentation update: `68b8b0975cf8ba765ca1aab559cf9b1579caf7c0`.
-- The documentation update itself creates a newer PR head; always re-fetch the exact head before using any CI result.
-- Issue #10 remains open while PR #19 is in progress.
-- **Do not mark ready, merge, close Issue #10, or begin Issue #11 until the exact final PR head passes the full contract below and the final audit/review is clean.**
-
+Issue #10: **Post-V1 — Wear OS workout companion**.
+PR #19: `GymTracker PR 10: Wear OS workout companion`.
+Branch used: `feat/wear-os-workout-companion`.
 Design source: `docs/PR10_WEAR_OS_DESIGN.md`.
 
-## Issue #10 verified architecture
+### Final PR evidence
+
+- Final exact PR head: `473dd18d1345aaf31f2f5816a5d160fa040f57ba`.
+- Final exact-head Android CI: run `32977841838` (#219) — **SUCCESS**.
+- Both jobs passed on that exact head:
+  - `test-build` — SUCCESS;
+  - `wear-connected` — SUCCESS.
+- Final PR artifacts on exact head `473dd18d1345aaf31f2f5816a5d160fa040f57ba`:
+  - `gymtracker-room-schema` — `9610274357`;
+  - `gymtracker-debug-apk` — `9610686849`;
+  - `gymtracker-release-apk` — `9610688066`;
+  - `gymtracker-wear-debug-apk` — `9610689649`;
+  - `gymtracker-wear-release-apk` — `9610690667`.
+- Final audit: 27 changed files, all GymTracker/Wear/CI/docs scope.
+- Reviews: 0.
+- PR conversation comments: 0.
+- Review threads: 0.
+- PR was kept DRAFT until exact-head CI and final audit were clean, then marked READY.
+
+### Final scope/safety audit
+
+Confirmed before ready/merge:
+
+- no Pulso / pulso-finanzas paths;
+- no real workout/health/personal data, secrets or identifying fixtures;
+- Room DB remains version **2** with committed schemas **v1/v2 only**;
+- no schema v3 and no Room schema file changes;
+- no portable backup/restore/CSV format or semantics change;
+- no Health Connect permission/scope change; the existing three read permissions remain unchanged;
+- no cloud/backend/account requirement;
+- no PR4–PR9 semantic change;
+- existing phone app still passes the full hardened mobile contract without requiring a watch;
+- Wear state is delivery/recovery state only, not a second canonical workout/history database;
+- duplicate/lost-ACK/out-of-order/restart paths are guarded by stable operation IDs, sequence ordering, expected/desired field checks and durable terminal receipts;
+- terminal phone receipts live under `noBackupFilesDir` and store only operation/workout IDs + terminal status/reason, never load/reps/RIR/timestamps/names/notes/health values.
+
+### Merge / Issue closure
+
+- PR #19 was squash-merged with `expected_head_sha=473dd18d1345aaf31f2f5816a5d160fa040f57ba`.
+- Squash/main commit: `7a6ef8063825f920ccb8566311bc4e59228fad59`.
+- PR #19 — MERGED / CLOSED.
+- Issue #10 — CLOSED / COMPLETED automatically via `Closes #10`.
+- `main` immediately after merge pointed exactly to `7a6ef8063825f920ccb8566311bc4e59228fad59`.
+
+### Post-merge main validation
+
+Android CI run `32983378019` (#220), event `push`, exact main head `7a6ef8063825f920ccb8566311bc4e59228fad59` — **SUCCESS**.
+
+All post-merge gates passed:
+
+1. mobile JVM tests;
+2. Wear protocol + Wear JVM tests;
+3. semantic Room schema verification;
+4. Room schema artifact;
+5. mobile API 35 connected tests;
+6. mobile lint;
+7. Wear/protocol lint;
+8. mobile debug APK;
+9. minified/resource-shrunk mobile release APK;
+10. Wear debug APK;
+11. minified/resource-shrunk Wear release APK;
+12. all four APK uploads;
+13. dedicated Wear OS connected instrumentation on API 34 small-round emulator.
+
+Post-merge artifacts on exact squash `7a6ef8063825f920ccb8566311bc4e59228fad59`:
+
+- `gymtracker-room-schema` — `9612460942`;
+- `gymtracker-debug-apk` — `9612719863`;
+- `gymtracker-release-apk` — `9612720424`;
+- `gymtracker-wear-debug-apk` — `9612721174`;
+- `gymtracker-wear-release-apk` — `9612721626`.
+
+## Final Issue #10 architecture contract
 
 ### Canonical truth
 
-Phone Room remains the **only canonical workout/history truth**. `WorkoutSet` remains the canonical set record. The watch is not a second history database and cannot create an independent workout truth.
+Phone Room remains the **only canonical workout/history truth**. `WorkoutSet` remains canonical set truth. Wear does not own independent workout history.
 
-Room stays at **DB version 2** with committed schemas **v1/v2 only**. Issue #10 has no demonstrated reason for schema v3 and currently makes **no Room schema change**.
+The watch persists only:
 
-The watch may persist only:
+- a minimal active-workout snapshot for wrist interaction; and
+- a durable pending-operation outbox in DataStore for disconnect/process-death/restart recovery.
 
-- a minimal active-workout snapshot required for wrist interaction; and
-- a durable pending-operation outbox required to survive connectivity loss/process death/restart.
+Wear backup is disabled. The phone persists only minimal terminal operation receipts under `noBackupFilesDir`; those receipts are delivery metadata, not workout truth and never enter portable backup/restore/CSV.
 
-That watch state is delivery/recovery state, not historical truth. Wear `android:allowBackup` is disabled.
+### Data Layer
 
-The phone additionally persists only terminal Wear operation receipts (operation/workout IDs + APPLIED/CONFLICT/REJECTED status/reason) in `noBackupFilesDir`. These receipts contain no load/reps/RIR/timestamps/names/notes/health values and exist only to make lost-ACK replay durable across phone process death. They are not Room truth and cannot enter backup/restore/CSV.
+Shared protocol module: `:wear-protocol`.
+Dedicated Wear application module: `:wear`.
+Phone module remains `:app`.
 
-### Data Layer transport
+Transport contract:
 
-Official current Android/Wear guidance was checked before implementation. The design uses:
-
-- `DataClient` for durable DataItems/state synchronization, including disconnected writes/reconnect delivery;
-- `CapabilityClient` only for reachability/installed-companion UX;
-- `WearableListenerService` on phone for Data Layer events when UI is not alive.
-
-`MessageClient` is deliberately **not** a correctness path because messages require connectivity and are not persisted/retried. `ChannelClient` is unnecessary for these small structured payloads. `NodeClient` is unnecessary for normal routing.
-
-Current Google Play Services Wearable dependency: `com.google.android.gms:play-services-wearable:20.0.1`.
+- `DataClient` for durable request/journal/snapshot DataItems;
+- `CapabilityClient` only for reachable-phone UX;
+- `WearableListenerService` on phone for background Data Layer events;
+- `MessageClient` is not a correctness path;
+- no ChannelClient/NodeClient dependency for normal protocol operation.
 
 Protocol paths:
 
@@ -96,221 +141,75 @@ Protocol paths:
 - `/gymtracker/workout/journal`
 - `/gymtracker/workout/snapshot`
 
-Shared protocol module: `:wear-protocol`.
+Google Play Services Wearable dependency: `20.0.1`.
 
-### Sync / conflict contract
+### Sync / conflicts / idempotency
 
-Watch mutations are narrow one-field operations with a stable `operationId`, monotonic watch-local `sequence`, target workout/set IDs, operation kind, `expectedValue`, and `desiredValue`.
+Watch mutations are narrow one-field operations with stable `operationId`, monotonic sequence, target workout/set IDs, operation kind, `expectedValue`, and `desiredValue`.
 
-Supported operations:
+Supported mutations:
 
 - edit load;
 - edit reps;
 - edit/clear optional RIR;
 - complete current set.
 
-Phone applies operations through Room transactions. For each changed field:
+Phone applies against canonical Room inside a write transaction:
 
-1. if canonical current value already equals `desiredValue`, replay is idempotent APPLIED;
-2. otherwise, if canonical current value equals `expectedValue`, apply only that field;
-3. otherwise return deterministic CONFLICT and do not overwrite phone truth.
+1. a durable terminal receipt returns the same prior terminal result;
+2. canonical value already equal to desired value is idempotent APPLIED;
+3. canonical value equal to expected value applies only that field;
+4. otherwise same-field stale state is CONFLICT and phone truth is not overwritten.
 
-The phone receipt store remembers terminal results for the current active workout so a lost ACK followed by later same-field operations cannot turn a previously applied operation into a false conflict. Receipt metadata is pruned when the active workout changes/ends.
-
-Stale/wrong/finished workout targets are REJECTED. No blind clock-based last-write-wins exists.
-
-Different-field edits remain mergeable: for example, a phone load edit does not block a watch reps-only edit. A same-field phone edit wins through explicit conflict rather than silent overwrite.
-
-### Offline / lifecycle behavior
-
-- Connected: watch persists user intent locally first, publishes pending journal, phone applies Room transaction, phone publishes canonical snapshot/result, watch clears only terminally acknowledged operations.
-- Connection lost: cached active snapshot remains usable; watch operation is saved locally before delivery is attempted.
-- Reconnect: watch republishes the complete unacknowledged journal in sequence order.
-- Duplicate/retransmitted journal: stable IDs + phone receipts + expected/desired comparison keep replay idempotent.
-- Out-of-order delivery: journal sequence ordering prevents blind rollback; stale writes cannot overwrite a different canonical field value.
-- Watch process death/restart: DataStore restores cached snapshot, pending journal and next sequence; pending work is republished.
-- Phone process death/restart: Room restores canonical truth; receipt metadata in `noBackupFilesDir` restores terminal operation knowledge for the active workout.
-- Phone edit while watch is stale: same-field conflict is explicit; different fields are preserved.
-- No active workout: watch shows a minimal start/resume-on-phone state and does not invent a workout.
-- Phone temporarily unavailable: cached active workout can continue generating locally saved pending operations; without a cached active workout the watch waits for phone state instead of inventing truth.
+Different-field edits remain mergeable. Stale/wrong/finished workout targets are REJECTED. There is no blind last-write-wins.
 
 ### Rest timer
 
-Existing PR4 semantics remain canonical:
+PR4 semantics remain canonical:
 
-- `WorkoutSet.completedAt` is completion truth.
-- canonical rest end remains the existing absolute `Workout.restTimerEndsAt` plus owning workout-exercise ID.
-- watch completion records one immutable user-action completion timestamp.
-- watch can derive provisional offline rest end from completion timestamp + snapshotted rest seconds.
-- replay never creates a new completion timestamp and therefore cannot restart rest merely because delivery was duplicated.
-- if the phone stops the canonical timer after completion, replay of an already-applied completion must not restart it.
+- `WorkoutSet.completedAt` is completion truth;
+- canonical rest end is existing `Workout.restTimerEndsAt` + owning workout-exercise ID;
+- watch completion creates one immutable user-action completion timestamp;
+- replay never regenerates the timestamp;
+- duplicate replay cannot restart a phone-stopped canonical timer.
 
-No separate ticking timer database is introduced.
+### Wrist-first UI
 
-## Wrist-first UI scope
+Wear UI intentionally contains only:
 
-The Wear app intentionally includes only:
-
-- current exercise and current set;
-- compact PREVIOUS / TARGET / TODAY context;
-- large load +/- controls using the snapshotted load increment;
-- large reps +/- controls;
+- current exercise/current set;
+- individually scrollable PREVIOUS / TARGET / TODAY rows;
+- large load +/-;
+- large reps +/-;
 - optional RIR +/- and clear;
-- prominent Complete set action;
-- rest countdown from an absolute end timestamp;
-- concise connected/syncing/saved-offline/conflict status;
-- minimal no-active/all-sets-complete states directing start/finish management to phone.
+- prominent Complete set;
+- rest countdown;
+- concise connected/syncing/saved-offline/conflict state;
+- minimal no-active/all-sets-complete states that direct workout start/finish management to phone.
 
-It intentionally excludes full History, Progress/charts, routine editor, exercise library, backup UI, Health Connect/recovery UI, workout finish flow and broad settings.
+It does not duplicate full phone History, Progress, routine editor, exercise library, backup, Health Connect/recovery, workout finish flow or broad settings.
 
-Wear Compose/Material components are used instead of shrinking phone UI. Primary +/- controls are 52 dp and Complete is at least 56 dp with explicit semantics/content descriptions.
+## PR4–PR9 invariants retained after Issue #10
 
-## Packaging/modules
+- PR4: immediate Room autosave, active-workout recovery, PREVIOUS + TARGET + TODAY, set types, notes, rest and finish semantics unchanged.
+- PR5: History/PR eligibility, Epley, heaviest-load, reps-at-load and volume semantics unchanged.
+- PR6: Progress/analytics formulas unchanged; no recovery-driven prescription added.
+- PR7: portable backup/restore and CSV unchanged; Wear snapshots/outbox/receipt metadata are excluded.
+- PR8: hardened phone accessibility, small-screen/recreation/error/loading behavior and full CI contract retained.
+- PR9: Health Connect remains optional/read-only with the same narrow permissions; Wear sync is separate from Health Connect.
 
-Current modules:
+## Current validation gate after this documentation commit
 
-- `:app` — canonical phone application/Room source of truth.
-- `:wear-protocol` — shared versioned serialization/state projection contract.
-- `:wear` — dedicated Wear OS application.
+This `PROJECT_CONTEXT.md` update creates a new documentation-only main head after the fully validated Issue #10 squash.
 
-Wear packaging:
+Before advancing beyond Issue #10:
 
-- same application ID as phone: `com.germanchoconta.gymtracker`;
-- unique Wear version code;
-- `android.hardware.type.watch` required;
-- marked non-standalone because starting/managing canonical workouts depends on phone;
-- cached active-workout interaction still tolerates temporary disconnects.
+1. fetch the exact documentation head created by this commit;
+2. require its Android CI to complete SUCCESS, including both `test-build` and `wear-connected`;
+3. verify its five artifacts: Room schema, mobile debug/release APK, Wear debug/release APK;
+4. confirm PR #19 remains merged/closed and Issue #10 remains closed/completed;
+5. confirm `main` points to the exact documentation head;
+6. only after those checks, read the **next real GitHub issue** directly from GitHub and provide the next-stage continuation prompt;
+7. **do not implement the next issue silently in the same stage.**
 
-Phone advertises capability `gymtracker_phone_workout_sync`.
-
-## Tests added for Issue #10
-
-All new fixtures are synthetic/non-identifying.
-
-Shared/JVM coverage includes:
-
-- protocol version/paths;
-- serialization round-trip including null RIR;
-- deterministic pending-operation projection/order;
-- current-set advancement after pending completion;
-- offline rest-end derivation;
-- no-active state.
-
-Phone/Room instrumentation includes:
-
-- duplicate operation replay/idempotency;
-- same-field stale conflict without overwrite;
-- independent-field merge/preservation;
-- completion timestamp persistence;
-- canonical rest timer end;
-- duplicate completion does not restart a phone-stopped timer;
-- PREVIOUS/TARGET snapshot mapping using existing semantics;
-- no-active snapshot;
-- terminal operation receipt persistence across store/service recreation.
-
-Wear instrumentation includes:
-
-- minimal no-active UI;
-- current exercise/set + PREVIOUS/TARGET context;
-- accessible action semantics;
-- pending offline operation persistence across `WearSyncStore` recreation;
-- clearing pending work only after terminal phone result.
-
-No test requires a physical watch, real pairing, real workout data or personal health data.
-
-## CI contract for PR #19
-
-Existing hardened mobile gates remain present and must all pass on the exact final head:
-
-1. mobile JVM tests;
-2. semantic Room schema verification (must prove v1/v2 unchanged);
-3. `gymtracker-room-schema` artifact;
-4. mobile API 35 connected tests;
-5. mobile lint;
-6. mobile debug APK;
-7. real minified/resource-shrunk mobile release APK;
-8. `gymtracker-debug-apk` artifact;
-9. `gymtracker-release-apk` artifact.
-
-Added Wear gates:
-
-- shared protocol JVM tests;
-- Wear JVM tests;
-- Wear/protocol lint;
-- Wear OS connected UI/restart tests on a hosted `android-wear` round emulator;
-- Wear debug APK;
-- Wear minified/resource-shrunk release APK;
-- `gymtracker-wear-debug-apk` artifact;
-- `gymtracker-wear-release-apk` artifact.
-
-CI history that must **not** be mistaken for final evidence:
-
-- run #206 / `32928727521` failed at Wear compilation because of an invalid explicit `item` DSL import. Protocol compilation/tests had passed. Fixed in commit `f1482931e05d85d8fbc69eda15da97fa449104b4`.
-- later intermediate heads demonstrated passing mobile JVM + Wear protocol/Wear JVM + semantic Room verification, but they are not final-head evidence.
-- Current exact-head CI must always be re-fetched after every commit.
-
-## PR4–PR9 invariants that Issue #10 must not change
-
-### PR4 — Workout logger
-
-- Phone Room remains canonical workout truth.
-- `WorkoutSet` remains canonical set truth.
-- Immediate autosave and active-workout recovery remain intact.
-- PREVIOUS + TARGET + TODAY meaning is unchanged.
-- Set types, notes, rest timer and finish semantics remain intact.
-- An active workout keeps priority.
-
-### PR5 — History / PR engine
-
-- Do not change PR eligibility.
-- Do not change Epley.
-- Do not change heaviest-load, reps-at-load or volume semantics.
-- Wear is not a second historical source.
-
-### PR6 — Progress
-
-- Do not change analytics/formulas.
-- Do not add recovery/progression prescriptions.
-
-### PR7 — Backup
-
-- Portable backup/restore and CSV formats remain unchanged.
-- Wear snapshots/outboxes/phone receipt metadata must never enter portable backup/CSV.
-
-### PR8 — UX/reliability
-
-- Do not degrade phone accessibility, small-screen, recreation, error or loading handling.
-- Keep the full hardened CI contract.
-
-### PR9 — Health Connect
-
-- Health Connect remains optional/read-only.
-- Wear sync is separate from Health Connect.
-- No new Health Connect permission.
-- No background/history permission.
-- No Health Connect write or `ExerciseSessionRecord`.
-- No recovery score or progression prescription.
-- No Health Connect persistence in Room.
-
-## Final audit required before ready/merge
-
-Before marking PR #19 ready:
-
-- re-fetch exact PR head;
-- confirm no Pulso/pulso-finanzas changes;
-- inspect all changed files/patches;
-- confirm no real/personal/sensitive fixtures/logs/secrets;
-- confirm only Room schemas v1/v2 and no DB version change;
-- confirm no portable backup/CSV change;
-- confirm no Health Connect permission/scope change;
-- confirm no cloud/backend/account dependency;
-- confirm no PR4–PR9 semantic change;
-- confirm mobile still functions without watch;
-- confirm duplicate/lost-ACK/out-of-order/restart paths cannot duplicate or silently overwrite sets;
-- confirm all PR reviews/comments/threads are resolved;
-- confirm **all jobs of the exact final head** are SUCCESS;
-- verify all five expected artifacts on that exact head: Room schema, mobile debug/release APK, Wear debug/release APK.
-
-Only then mark ready. Re-check exact head/status after ready. Merge only with expected-head protection. Then verify Issue #10 CLOSED/COMPLETED and run/artifacts on post-merge main.
-
-After merge, update this file on main with final evidence, verify the documentation-head CI/artifacts, and only then read the next real GitHub issue and provide the next-stage prompt. **Do not start Issue #11 silently.**
+Never accept an older SHA as evidence for a newer head.

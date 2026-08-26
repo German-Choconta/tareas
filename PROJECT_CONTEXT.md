@@ -287,6 +287,10 @@ Integrated acceptance is implemented in ReleaseIntegratedAcceptanceTest using on
 
 See docs/ISSUE23_RELEASE_READINESS.md for the acceptance matrix and distribution boundary.
 
-At the time this section was authored, the implementation branch exists and the PR has not yet been assigned a real GitHub number. After the PR is created, update this section once with the real PR number before the final exact-head CI gate. Do not create a documentation-only retry loop merely to chase CI.
+PR #24: **GymTracker: release readiness and integrated acceptance**.
+State at documentation alignment: OPEN / DRAFT.
+The PR was created from branch feat/release-readiness-integrated-acceptance against exact base 26ba5f5d1c7e167310755203383067305ac2a338. The implementation head immediately before this one-time PR-number alignment was 90ff24e8c9d75c75e48e4be3ff590dadab3faf1b.
+
+This documentation alignment is intentionally performed once before the final exact-head CI gate. The exact current PR head, CI run, artifacts, mergeability, reviews/comments/threads and final audit must always be verified directly in GitHub; do not create a documentation-only retry loop merely to chase CI.
 
 **Do not merge the Issue #23 PR without explicit user approval. Do not advance to another issue while #23 is open.**

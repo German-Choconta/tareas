@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.germanchoconta.gymtracker.data.local.PreviousReferenceModes
 import com.germanchoconta.gymtracker.data.local.SetTypes
+import com.germanchoconta.gymtracker.domain.ProgressionAction
+import com.germanchoconta.gymtracker.domain.ProgressionRecommendation
 import com.germanchoconta.gymtracker.ui.management.ExerciseLibraryUiState
 import com.germanchoconta.gymtracker.ui.management.RoutineLibraryUiState
 import com.germanchoconta.gymtracker.ui.theme.GymTrackerTheme
@@ -96,6 +98,7 @@ class V1HardeningUiTest {
                     WorkoutLoggerScreen(
                         state = syntheticWorkoutState(),
                         onLoadChange = { _, _ -> },
+                        onApplySuggestedLoad = {},
                         onRepsChange = { _, _ -> },
                         onRirChange = { _, _ -> },
                         onTypeChange = { _, _ -> },
@@ -125,6 +128,59 @@ class V1HardeningUiTest {
     }
 
     @Test
+    fun progressionGuidanceIsExplicitAndApplyRequiresUserAction() {
+        var applyCount = 0
+        val state = syntheticWorkoutState().copy(
+            exercises = syntheticWorkoutState().exercises.map { exercise ->
+                exercise.copy(
+                    sets = exercise.sets.map { set ->
+                        set.copy(
+                            progression = ProgressionRecommendation(
+                                action = ProgressionAction.INCREASE_LOAD,
+                                reason = "La referencia alcanzó el techo de 10 reps.",
+                                suggestedLoadGrams = 42_500L,
+                                suggestedReps = 6,
+                                previousLoadGrams = 40_000L,
+                                previousReps = 10,
+                            ),
+                        )
+                    },
+                )
+            },
+        )
+        composeRule.setContent {
+            MaterialTheme {
+                WorkoutLoggerScreen(
+                    state = state,
+                    onLoadChange = { _, _ -> },
+                    onApplySuggestedLoad = { applyCount += 1 },
+                    onRepsChange = { _, _ -> },
+                    onRirChange = { _, _ -> },
+                    onTypeChange = { _, _ -> },
+                    onToggleComplete = {},
+                    onAddSet = {},
+                    onRemoveSet = { _, _ -> },
+                    onAddExercise = {},
+                    onReplaceExercise = { _, _ -> },
+                    onWorkoutNotesChange = {},
+                    onExerciseNotesChange = { _, _ -> },
+                    onStopTimer = {},
+                    onRequestFinish = {},
+                    onFinishConfirmed = {},
+                    onDismissFinish = {},
+                    onMessageShown = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("PROGRESS • Sube carga").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Objetivo orientativo: 6 reps").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Aplicar 42.5 kg").performScrollTo().performClick()
+        composeRule.waitForIdle()
+        assertEquals(1, applyCount)
+    }
+
+    @Test
     fun exercisePickerSurvivesSavedInstanceStateRestoration() {
         val restorationTester = StateRestorationTester(composeRule)
         val state = syntheticWorkoutState().copy(
@@ -143,6 +199,7 @@ class V1HardeningUiTest {
                 WorkoutLoggerScreen(
                     state = state,
                     onLoadChange = { _, _ -> },
+                    onApplySuggestedLoad = {},
                     onRepsChange = { _, _ -> },
                     onRirChange = { _, _ -> },
                     onTypeChange = { _, _ -> },

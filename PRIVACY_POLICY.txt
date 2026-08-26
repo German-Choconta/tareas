@@ -1,0 +1,319 @@
+GYMTRACKER — PRIVACY POLICY
+Effective date: August 26, 2026
+
+This Privacy Policy explains how GymTracker handles information when you use the Android phone app and its optional Wear OS companion.
+
+Developer / publisher: German-Choconta
+Project: GymTracker
+Package name: com.germanchoconta.gymtracker
+
+Privacy inquiries:
+https://github.com/German-Choconta/tareas/issues
+Please do not include workout details, health information, credentials, backups, or other personal/sensitive information in a public GitHub issue.
+
+1. CORE PRIVACY MODEL
+
+GymTracker is designed as an offline-first app. It does not require a GymTracker account and it does not use a developer-operated cloud backend for workout history.
+
+Your canonical workout history is stored locally on the phone in the app's Room database.
+
+GymTracker does not sell personal information or health data and does not use workout or Health Connect data for advertising.
+
+2. TRAINING DATA
+
+GymTracker lets you create and manage information such as:
+
+- exercises and exercise names;
+- routines and training targets;
+- workout history;
+- loads, repetitions, RIR, set types and completion state;
+- workout and exercise notes;
+- personal-record and progress calculations derived from your training history.
+
+This information is stored locally on your device as app data. GymTracker does not transmit this training database to a developer-operated server.
+
+Retention:
+Training data remains in the app's local storage until it is removed through supported app operations, replaced through restore, app storage is cleared, or GymTracker is uninstalled, subject to Android backup/restore behavior described below.
+
+3. PORTABLE BACKUP AND CSV EXPORT
+
+GymTracker provides user-initiated portable backup/restore and CSV export.
+
+When you export a backup or CSV file, you choose where that file is saved or shared through Android. GymTracker does not receive a server copy of the exported file.
+
+Files you save outside GymTracker remain under your control and are not removed automatically when GymTracker is uninstalled or its local storage is cleared. Delete those exported files from their destination yourself if you no longer want to retain them.
+
+4. ANDROID SYSTEM BACKUP AND DEVICE TRANSFER
+
+The phone app allows Android's operating-system backup and device-transfer mechanisms to include the GymTracker Room database.
+
+If Android cloud backup is enabled for your device/account, Android or Google Play services may back up eligible app database data to the backup account configured on your device. GymTracker does not operate that backup service and the developer does not receive or access a copy of your Android system backup.
+
+Google's backup service handles such backups under Google's applicable terms and privacy policy. You can manage Android backup settings from your device settings.
+
+Device-to-device transfer may also copy eligible GymTracker database data when you migrate to another Android device.
+
+5. HEALTH CONNECT — OPTIONAL AND READ-ONLY
+
+Health Connect is optional. GymTracker requests read access only to:
+
+- sleep sessions and available sleep stages;
+- resting heart rate;
+- heart rate variability recorded specifically as RMSSD.
+
+GymTracker uses these values only to display informational recovery context next to training information.
+
+Health Connect data is not used to diagnose a medical condition, prescribe treatment, or automatically change workout loads, TARGET values, PREVIOUS references, routines, or progression recommendations.
+
+GymTracker does not:
+
+- write health data to Health Connect;
+- import Health Connect exercise sessions as GymTracker workouts;
+- store Health Connect records in the canonical Room workout database;
+- include Health Connect recovery values in GymTracker portable backups or CSV exports;
+- send Health Connect recovery values to a developer backend;
+- use Health Connect recovery values for advertising or analytics;
+- request background Health Connect access or extended-history access for this feature.
+
+The recovery screen reads a bounded time window on demand while you use the app. The currently displayed normalized recovery context is kept only in memory.
+
+Disconnecting Health Connect revokes GymTracker's Health Connect permissions through the app flow and clears the in-memory recovery context. You can also manage or revoke Health Connect permissions in Android / Health Connect settings.
+
+If more than one source application supplies a supported Health Connect record type, GymTracker keeps those sources separate rather than inventing cross-source deduplication.
+
+6. WEAR OS COMPANION
+
+The Wear OS app is a companion to the phone app. The phone Room database remains the canonical workout/history source.
+
+The phone and watch exchange only the workout state and operation information needed for the companion experience through the Android / Google Play Services Wearable Data Layer.
+
+The watch can retain a minimal active-workout snapshot and a pending-operation outbox so that wrist actions can recover after temporary disconnection or process restart. It does not maintain a second independent canonical workout-history database.
+
+The phone can retain minimal terminal operation receipts needed for sync idempotency and recovery. These receipts are delivery metadata, not a second workout history, and they are excluded from GymTracker portable backup/CSV.
+
+Wear app backup is disabled.
+
+7. THIRD-PARTY SERVICES AND SDKS
+
+GymTracker relies on Android platform components and Google Play services where needed for:
+
+- Health Connect;
+- Wear OS / Wearable Data Layer;
+- Android system backup and device transfer.
+
+GymTracker does not include an advertising SDK and does not use a developer-operated analytics or crash-reporting backend in the release candidate covered by this policy.
+
+Platform services can process technical or account information under their own terms and privacy policies when providing operating-system services.
+
+8. DATA SHARING
+
+GymTracker does not sell workout data or Health Connect data.
+
+GymTracker does not intentionally provide workout or Health Connect data to advertisers or data brokers.
+
+Data can move outside the app only as necessary for user-controlled or platform-provided functionality, including:
+
+- a backup or CSV export initiated by you;
+- Android system backup or device transfer when enabled on your device;
+- phone/watch synchronization through the Wearable Data Layer;
+- Health Connect access performed on your device after you grant permission.
+
+9. SECURITY
+
+GymTracker uses Android's application sandbox and platform permission model.
+
+Health Connect access uses Android runtime health permissions and is limited to the specific read-only data types described above.
+
+No production signing key, upload key, password, API token, or other private release credential is stored in the public GymTracker source repository.
+
+Portable backup files and CSV exports should be treated as sensitive if they contain your training history. Their security after export depends on the destination you choose.
+
+10. RETENTION AND DELETION
+
+Canonical training data is retained locally as described in Section 2.
+
+To remove all app-managed local GymTracker data from a device, you can clear GymTracker's app storage in Android settings or uninstall the app. Android system backups or user-created portable backups/CSV exports may continue to exist independently until you remove them through the corresponding Android/Google account or file-storage controls.
+
+Health Connect recovery context held by GymTracker is not persisted as canonical workout data and is cleared from app memory when the integration is disconnected or the process no longer retains that context.
+
+The Wear companion's local delivery/recovery state is removed when Wear app data is cleared or the app is uninstalled, and normal protocol processing also resolves pending state as operations reach terminal outcomes.
+
+GymTracker does not provide user accounts, so there is no separate GymTracker server account or developer-hosted account database to delete.
+
+11. CHILDREN
+
+GymTracker is a general strength-training utility and is not designed as a child-directed service. The developer does not knowingly operate a backend that collects children's personal information through GymTracker.
+
+12. CHANGES TO THIS POLICY
+
+If GymTracker's data practices materially change, the privacy policy and relevant in-app disclosures should be updated before publishing a version with those changed practices.
+
+13. CONTACT
+
+Developer / publisher: German-Choconta
+
+Privacy inquiry mechanism:
+https://github.com/German-Choconta/tareas/issues
+
+For your privacy, do not post personal data, health data, workout exports, credentials, tokens, or other sensitive information in a public issue.
+
+
+────────────────────────────────────────────────────────────
+POLÍTICA DE PRIVACIDAD — GYMTRACKER
+Fecha de entrada en vigor: 26 de agosto de 2026
+
+Esta Política de Privacidad explica cómo GymTracker trata la información cuando utilizas la aplicación Android para teléfono y su companion opcional para Wear OS.
+
+Desarrollador / publicador: German-Choconta
+Proyecto: GymTracker
+Nombre del paquete: com.germanchoconta.gymtracker
+
+Consultas de privacidad:
+https://github.com/German-Choconta/tareas/issues
+No incluyas detalles de entrenamiento, información de salud, credenciales, backups ni otra información personal o sensible en un issue público de GitHub.
+
+1. MODELO DE PRIVACIDAD
+
+GymTracker está diseñado como una aplicación offline-first. No requiere una cuenta de GymTracker y no utiliza un backend en la nube operado por el desarrollador para almacenar el historial de entrenamiento.
+
+El historial canónico de entrenamiento se guarda localmente en el teléfono dentro de la base de datos Room de la aplicación.
+
+GymTracker no vende información personal ni datos de salud y no utiliza datos de entrenamiento o Health Connect para publicidad.
+
+2. DATOS DE ENTRENAMIENTO
+
+GymTracker permite crear y gestionar, entre otros:
+
+- ejercicios y nombres de ejercicios;
+- rutinas y objetivos de entrenamiento;
+- historial de entrenamientos;
+- cargas, repeticiones, RIR, tipos de serie y estado de finalización;
+- notas de entrenamientos y ejercicios;
+- cálculos de récords personales y progreso derivados del historial.
+
+Esta información se guarda localmente como datos de la aplicación. GymTracker no transmite esta base de datos de entrenamiento a un servidor operado por el desarrollador.
+
+Conservación:
+Los datos permanecen en el almacenamiento local hasta que se eliminan mediante operaciones disponibles en la aplicación, se sustituyen mediante una restauración, se borran los datos de la aplicación o se desinstala GymTracker, sujeto al comportamiento de backup/restauración de Android descrito más adelante.
+
+3. BACKUP PORTÁTIL Y EXPORTACIÓN CSV
+
+GymTracker ofrece backup/restauración portátil y exportación CSV iniciados por el usuario.
+
+Cuando exportas un backup o CSV, eliges mediante Android dónde guardar o compartir el archivo. GymTracker no recibe una copia del archivo en un servidor.
+
+Los archivos guardados fuera de GymTracker permanecen bajo tu control y no se eliminan automáticamente al desinstalar GymTracker o borrar sus datos locales. Si ya no deseas conservarlos, debes eliminarlos del destino donde los guardaste.
+
+4. BACKUP DEL SISTEMA ANDROID Y TRANSFERENCIA ENTRE DISPOSITIVOS
+
+La aplicación de teléfono permite que los mecanismos de backup y transferencia de Android incluyan la base Room de GymTracker.
+
+Si el backup en la nube de Android está habilitado para tu dispositivo/cuenta, Android o Google Play services puede respaldar datos elegibles de la base de la aplicación en la cuenta de backup configurada en el dispositivo. GymTracker no opera ese servicio y el desarrollador no recibe ni accede a una copia de tu backup del sistema Android.
+
+Google gestiona ese servicio de backup conforme a sus términos y política de privacidad aplicables. Puedes administrar el backup de Android desde los ajustes del dispositivo.
+
+La transferencia dispositivo a dispositivo también puede copiar datos elegibles de GymTracker al migrar a otro dispositivo Android.
+
+5. HEALTH CONNECT — OPCIONAL Y SOLO LECTURA
+
+Health Connect es opcional. GymTracker solicita únicamente acceso de lectura a:
+
+- sesiones de sueño y etapas disponibles;
+- frecuencia cardíaca en reposo;
+- variabilidad de la frecuencia cardíaca registrada específicamente como RMSSD.
+
+GymTracker utiliza estos valores únicamente para mostrar contexto informativo de recuperación junto a la información de entrenamiento.
+
+Los datos de Health Connect no se utilizan para diagnosticar enfermedades, prescribir tratamientos ni cambiar automáticamente cargas, valores TARGET, referencias PREVIOUS, rutinas o recomendaciones de progresión.
+
+GymTracker no:
+
+- escribe datos de salud en Health Connect;
+- importa sesiones de ejercicio de Health Connect como entrenamientos de GymTracker;
+- guarda registros de Health Connect en la base Room canónica de entrenamientos;
+- incluye valores de recuperación de Health Connect en backups portátiles o CSV;
+- envía valores de recuperación de Health Connect a un backend del desarrollador;
+- utiliza valores de Health Connect para publicidad o analytics;
+- solicita acceso en segundo plano ni acceso de historial ampliado para esta función.
+
+La pantalla de recuperación consulta una ventana temporal acotada bajo demanda mientras utilizas la app. El contexto normalizado mostrado se mantiene únicamente en memoria.
+
+Al desconectar Health Connect, el flujo de la aplicación revoca los permisos de GymTracker y limpia el contexto que estaba en memoria. También puedes gestionar o revocar los permisos desde Android / Health Connect.
+
+Si más de una aplicación de origen aporta un tipo de registro compatible, GymTracker mantiene los orígenes separados en lugar de inventar una deduplicación entre fuentes.
+
+6. COMPANION DE WEAR OS
+
+La aplicación Wear OS es un companion de la aplicación del teléfono. La base Room del teléfono sigue siendo la única fuente canónica del historial.
+
+Teléfono y reloj intercambian únicamente el estado de entrenamiento y la información operacional necesaria para la experiencia companion mediante Android / Google Play Services Wearable Data Layer.
+
+El reloj puede conservar un snapshot mínimo del entrenamiento activo y un outbox de operaciones pendientes para recuperarse de desconexiones temporales o reinicios del proceso. No mantiene una segunda base canónica independiente de historial.
+
+El teléfono puede conservar recibos terminales mínimos necesarios para idempotencia y recuperación de sincronización. Son metadatos de entrega, no un segundo historial, y quedan excluidos del backup portátil/CSV de GymTracker.
+
+El backup de la aplicación Wear está deshabilitado.
+
+7. SERVICIOS Y SDK DE TERCEROS
+
+GymTracker utiliza componentes de la plataforma Android y Google Play services cuando son necesarios para:
+
+- Health Connect;
+- Wear OS / Wearable Data Layer;
+- backup del sistema Android y transferencia de dispositivo.
+
+GymTracker no incorpora un SDK de publicidad y no utiliza un backend de analytics o crash reporting operado por el desarrollador en el release candidate cubierto por esta política.
+
+Los servicios de plataforma pueden procesar información técnica o de cuenta conforme a sus propios términos y políticas de privacidad al prestar servicios del sistema operativo.
+
+8. USO COMPARTIDO DE DATOS
+
+GymTracker no vende datos de entrenamiento ni datos de Health Connect.
+
+GymTracker no proporciona intencionadamente datos de entrenamiento o Health Connect a anunciantes o data brokers.
+
+Los datos pueden salir de la aplicación únicamente cuando sea necesario para funciones controladas por el usuario o provistas por la plataforma, incluyendo:
+
+- un backup o CSV que tú inicias;
+- backup del sistema Android o transferencia de dispositivo cuando estén habilitados;
+- sincronización teléfono/reloj mediante Wearable Data Layer;
+- acceso a Health Connect en el dispositivo después de que concedas permisos.
+
+9. SEGURIDAD
+
+GymTracker utiliza el sandbox de aplicaciones Android y el modelo de permisos de la plataforma.
+
+El acceso a Health Connect utiliza permisos de salud de Android y está limitado a los tipos de datos de solo lectura descritos anteriormente.
+
+Ninguna clave de firma de producción, upload key, contraseña, token de API u otra credencial privada de publicación se almacena en el repositorio público del código fuente de GymTracker.
+
+Los archivos de backup portátil y CSV deben considerarse sensibles si contienen tu historial de entrenamiento. Su seguridad después de exportarlos depende del destino que elijas.
+
+10. CONSERVACIÓN Y ELIMINACIÓN
+
+Los datos canónicos de entrenamiento se conservan localmente según la Sección 2.
+
+Para eliminar todos los datos locales gestionados por GymTracker en un dispositivo, puedes borrar el almacenamiento de GymTracker desde los ajustes de Android o desinstalar la aplicación. Los backups del sistema Android o los backups/CSV creados por el usuario pueden seguir existiendo de forma independiente hasta que los elimines mediante los controles correspondientes de Android/cuenta Google o del almacenamiento donde estén guardados.
+
+El contexto de recuperación de Health Connect mantenido por GymTracker no se persiste como historial canónico y se elimina de la memoria de la app al desconectar la integración o cuando el proceso deja de retener dicho contexto.
+
+El estado local de entrega/recuperación del companion Wear se elimina al borrar los datos de la app Wear o desinstalarla; el procesamiento normal del protocolo también resuelve el estado pendiente cuando las operaciones llegan a un resultado terminal.
+
+GymTracker no ofrece cuentas de usuario, por lo que no existe una cuenta de servidor GymTracker ni una base de cuentas alojada por el desarrollador que deba eliminarse.
+
+11. MENORES
+
+GymTracker es una herramienta general para entrenamiento de fuerza y no está diseñada como servicio dirigido a menores. El desarrollador no opera un backend que recopile intencionadamente información personal de menores a través de GymTracker.
+
+12. CAMBIOS DE ESTA POLÍTICA
+
+Si las prácticas de datos de GymTracker cambian materialmente, la política de privacidad y las divulgaciones relevantes dentro de la aplicación deberán actualizarse antes de publicar una versión con esas nuevas prácticas.
+
+13. CONTACTO
+
+Desarrollador / publicador: German-Choconta
+
+Mecanismo para consultas de privacidad:
+https://github.com/German-Choconta/tareas/issues
+
+Por privacidad, no publiques datos personales, datos de salud, exports de entrenamientos, credenciales, tokens ni otra información sensible en un issue público.

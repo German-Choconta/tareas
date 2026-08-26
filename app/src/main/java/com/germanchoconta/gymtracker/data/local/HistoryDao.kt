@@ -204,6 +204,7 @@ interface HistoryDao {
           AND w.finishedAt IS NOT NULL
           AND w.startedAt < :beforeStartedAt
           AND ws.completedAt IS NOT NULL
+          AND ws.reps > 0
           AND ws.type = 'WORK'
           AND (:routineId IS NULL OR w.routineId = :routineId)
         ORDER BY

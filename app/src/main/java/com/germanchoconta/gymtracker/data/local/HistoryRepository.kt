@@ -7,6 +7,7 @@ import com.germanchoconta.gymtracker.domain.ExercisePersonalRecords
 import com.germanchoconta.gymtracker.domain.PersonalRecordEngine
 import com.germanchoconta.gymtracker.domain.PrSetFact
 import com.germanchoconta.gymtracker.domain.PreviousSessionComparison
+import com.germanchoconta.gymtracker.domain.ProgressionObservation
 
 class HistoryRepository(private val historyDao: HistoryDao) {
     fun observeExercisesWithFinishedHistory() = historyDao.observeExercisesWithFinishedHistory()
@@ -43,6 +44,23 @@ class HistoryRepository(private val historyDao: HistoryDao) {
 
     suspend fun previousSessionComparison(exerciseId: String): PreviousSessionComparison? =
         PersonalRecordEngine.previousSessionComparison(prFacts(exerciseId))
+
+    suspend fun progressionObservations(
+        exerciseId: String,
+        referenceMode: String,
+        routineId: String?,
+        beforeStartedAt: Long,
+    ): List<ProgressionObservation> {
+        val routineFilter = when (referenceMode) {
+            PreviousReferenceModes.SAME_ROUTINE -> routineId ?: return emptyList()
+            else -> null
+        }
+        return historyDao.getProgressionObservations(
+            exerciseId = exerciseId,
+            beforeStartedAt = beforeStartedAt,
+            routineId = routineFilter,
+        ).map(ProgressionObservationRow::toDomain)
+    }
 }
 
 internal fun PrFactRow.toDomain() = PrSetFact(
@@ -58,4 +76,14 @@ internal fun PrFactRow.toDomain() = PrSetFact(
     reps = reps,
     rirTenths = rirTenths,
     completedAt = completedAt,
+)
+
+internal fun ProgressionObservationRow.toDomain() = ProgressionObservation(
+    workoutId = workoutId,
+    startedAt = startedAt,
+    workoutSetId = workoutSetId,
+    setPosition = setPosition,
+    loadGrams = loadGrams,
+    reps = reps,
+    rirTenths = rirTenths,
 )

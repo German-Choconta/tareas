@@ -51,6 +51,17 @@ data class PrFactRow(
     val completedAt: Long?,
 )
 
+data class ProgressionObservationRow(
+    val workoutId: String,
+    val routineId: String?,
+    val startedAt: Long,
+    val workoutSetId: String,
+    val setPosition: Int,
+    val loadGrams: Long,
+    val reps: Int,
+    val rirTenths: Int?,
+)
+
 @Dao
 @DaoReturnTypeConverters(PagingSourceDaoReturnTypeConverter::class)
 interface HistoryDao {
@@ -174,4 +185,39 @@ interface HistoryDao {
         startInclusive: Long,
         endExclusive: Long,
     ): List<PrFactRow>
+
+    @Query(
+        """
+        SELECT
+            w.id AS workoutId,
+            w.routineId AS routineId,
+            w.startedAt AS startedAt,
+            ws.id AS workoutSetId,
+            ws.position AS setPosition,
+            ws.loadGrams AS loadGrams,
+            ws.reps AS reps,
+            ws.rirTenths AS rirTenths
+        FROM workout w
+        INNER JOIN workout_exercise we ON we.workoutId = w.id
+        INNER JOIN workout_set ws ON ws.workoutExerciseId = we.id
+        WHERE we.exerciseId = :exerciseId
+          AND w.finishedAt IS NOT NULL
+          AND w.startedAt < :beforeStartedAt
+          AND ws.completedAt IS NOT NULL
+          AND ws.type = 'WORK'
+          AND (:routineId IS NULL OR w.routineId = :routineId)
+        ORDER BY
+            w.startedAt DESC,
+            w.id DESC,
+            we.position ASC,
+            we.id ASC,
+            ws.position ASC,
+            ws.id ASC
+        """,
+    )
+    suspend fun getProgressionObservations(
+        exerciseId: String,
+        beforeStartedAt: Long,
+        routineId: String?,
+    ): List<ProgressionObservationRow>
 }

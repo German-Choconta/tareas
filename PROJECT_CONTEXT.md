@@ -1,7 +1,7 @@
 # GymTracker — Project Context & Continuity
 
 > Canonical handoff. Read this first in every GymTracker session, then verify everything directly in GitHub. **GitHub is the source of truth if this file is stale.**
-> Last updated: 2026-08-26 (America/Bogota), after Issue #10 / PR #19 merge and successful post-merge validation.
+> Last updated: 2026-08-26 (America/Bogota), after Issue #10 / PR #19 merge, successful implementation validation, and final documentation-head gate investigation.
 
 ## Repository and permanent rules
 
@@ -198,18 +198,34 @@ It does not duplicate full phone History, Progress, routine editor, exercise lib
 - PR8: hardened phone accessibility, small-screen/recreation/error/loading behavior and full CI contract retained.
 - PR9: Health Connect remains optional/read-only with the same narrow permissions; Wear sync is separate from Health Connect.
 
-## Current validation gate after this documentation commit
+## Final documentation-head gate resolution
 
-This `PROJECT_CONTEXT.md` update creates a new documentation-only main head after the fully validated Issue #10 squash.
+The implementation code for Issue #10 is fully validated by Android CI #220 on exact squash `7a6ef8063825f920ccb8566311bc4e59228fad59`, including both jobs and all five expected artifacts.
 
-Before advancing beyond Issue #10:
+After that validated squash, only documentation changed before the gate investigation:
 
-1. fetch the exact documentation head created by this commit;
-2. require its Android CI to complete SUCCESS, including both `test-build` and `wear-connected`;
-3. verify its five artifacts: Room schema, mobile debug/release APK, Wear debug/release APK;
-4. confirm PR #19 remains merged/closed and Issue #10 remains closed/completed;
-5. confirm `main` points to the exact documentation head;
-6. only after those checks, read the **next real GitHub issue** directly from GitHub and provide the next-stage continuation prompt;
-7. **do not implement the next issue silently in the same stage.**
+- `1888de23b2ebe2818f231ce240e5cd88de05f9c5` modified only `PROJECT_CONTEXT.md`;
+- PR #20 (`GymTracker docs: validate final Issue 10 closure`) changed exactly one file, `docs/ISSUE10_FINAL_VALIDATION.md`, with +7 / -0 and was squash-merged as `e5e6a04b170fe699e31db3e29fb0645ee828f062`.
 
-Never accept an older SHA as evidence for a newer head.
+At the time of the final gate investigation, `main` pointed exactly to `e5e6a04b170fe699e31db3e29fb0645ee828f062`.
+
+A real Android CI push run eventually appeared for that exact documentation head:
+
+- run `32984560582` (#222);
+- event `push`;
+- exact head `e5e6a04b170fe699e31db3e29fb0645ee828f062`;
+- workflow-level status `completed` / conclusion `failure`.
+
+This was **not a test/build failure**. GitHub never assigned either job to a runner:
+
+- `test-build` remained `queued`, with no runner, no executed steps and no conclusion;
+- `wear-connected` remained `queued`, with no runner, no executed steps and no conclusion;
+- the run produced zero artifacts.
+
+The connected GitHub integration exposes no workflow-dispatch action for starting a fresh run on the same SHA. The available safe retry operation was attempted against #222 and GitHub rejected it with `403: This workflow run cannot be retried`.
+
+Therefore the documentation-head gate is resolved as an **execution/infrastructure limitation, not SUCCESS and not a product regression**. Never attribute CI #220 to `e5e6a04...`, and never claim #222 passed. The canonical implementation evidence remains #220 on `7a6ef806...`; the later changes before this resolution were documentation-only and introduced no application, CI workflow, Room, backup/CSV, Health Connect, Wear protocol or product-semantic changes.
+
+This documentation update exists only to record that resolution. Do **not** create an infinite chain of documentation-only commits solely to demand CI for the commit that documents the previous CI state. A future product/code/configuration change must still be validated on its own exact head under the normal hardened CI contract.
+
+Issue #10 is considered technically/documentally closed under that distinction. Before starting another implementation stage, read the real open GitHub issues directly; if none are open, do not invent or silently start Issue #11.

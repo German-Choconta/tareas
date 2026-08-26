@@ -18,6 +18,10 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 
 class PhoneWearDataLayerService : WearableListenerService() {
+    private val receiptStore by lazy {
+        PhoneWearOperationReceiptStore(noBackupFilesDir)
+    }
+
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         val changes = dataEvents
             .filter { event -> event.type == DataEvent.TYPE_CHANGED }
@@ -33,8 +37,9 @@ class PhoneWearDataLayerService : WearableListenerService() {
         if (changes.isEmpty()) return
 
         // WearableListenerService delivers callbacks on a background thread.
-        // Keep the canonical Room mutation and reply together so process death
-        // between them is recovered by idempotent journal replay.
+        // Canonical mutations happen in Room. The no-backup receipt file only
+        // remembers terminal operation IDs so a lost ACK remains idempotent even
+        // when later operations have already changed the same field.
         runBlocking {
             changes.forEach { (path, payload) ->
                 runCatching {
@@ -50,6 +55,11 @@ class PhoneWearDataLayerService : WearableListenerService() {
     private suspend fun handleRequest(payload: String) {
         val request = runCatching { WearProtocolCodec.decodeRequest(payload) }.getOrNull() ?: return
         if (request.protocolVersion != WEAR_PROTOCOL_VERSION) return
+        val activeWorkoutId = GymTrackerDatabase.build(applicationContext)
+            .workoutDao()
+            .getActiveWorkout()
+            ?.id
+        receiptStore.retainOnly(activeWorkoutId)
         publishSnapshot(emptyList())
     }
 
@@ -65,10 +75,23 @@ class PhoneWearDataLayerService : WearableListenerService() {
             }
         } else {
             val database = GymTrackerDatabase.build(applicationContext)
+            val activeWorkoutId = database.workoutDao().getActiveWorkout()?.id
+            receiptStore.retainOnly(activeWorkoutId)
             val applier = WearSetOperationApplier(database)
             journal.operations
                 .sortedWith(compareBy({ it.sequence }, { it.operationId }))
-                .map { operation -> applier.apply(operation) }
+                .map { operation ->
+                    if (operation.workoutId == activeWorkoutId) {
+                        receiptStore.get(operation.operationId)
+                            ?: applier.apply(operation).also { result ->
+                                receiptStore.put(operation.workoutId, result)
+                            }
+                    } else {
+                        // Stale/non-active operations are read-only rejections, so
+                        // they do not need durable receipts to remain safe on replay.
+                        applier.apply(operation)
+                    }
+                }
         }
         publishSnapshot(results)
     }

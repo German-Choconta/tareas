@@ -8,12 +8,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -88,13 +91,19 @@ class RecoveryContextScreenTest {
         )
 
         composeRule.onNodeWithText("No es un diagnóstico", substring = true).assertIsDisplayed()
-        composeRule.onNodeWithText("Sueño").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("6 h").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("59 bpm").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("HRV (RMSSD)").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("RMSSD; no se mezcla", substring = true).performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("Desconectar").performScrollTo().assertIsDisplayed()
+        assertTextReachable("Sueño")
+        assertTextReachable("6 h")
+        assertTextReachable("59 bpm")
+        assertTextReachable("HRV (RMSSD)")
+        assertTextReachable("RMSSD; no se mezcla", substring = true)
+        assertTextReachable("Desconectar")
         composeRule.onRoot().tryPerformAccessibilityChecks()
+    }
+
+    private fun assertTextReachable(text: String, substring: Boolean = false) {
+        val matcher = hasText(text, substring = substring)
+        composeRule.onNode(hasScrollAction()).performScrollToNode(matcher)
+        composeRule.onNode(matcher).assertIsDisplayed()
     }
 
     private fun setScreen(

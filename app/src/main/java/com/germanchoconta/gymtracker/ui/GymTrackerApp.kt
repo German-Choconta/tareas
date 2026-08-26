@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.germanchoconta.gymtracker.data.backup.BackupDocumentIo
 import com.germanchoconta.gymtracker.data.backup.BackupRepository
+import com.germanchoconta.gymtracker.data.health.RecoveryHealthSource
 import com.germanchoconta.gymtracker.data.local.ExerciseRepository
 import com.germanchoconta.gymtracker.data.local.HistoryRepository
 import com.germanchoconta.gymtracker.data.local.RoutineRepository
@@ -43,6 +44,8 @@ import com.germanchoconta.gymtracker.ui.management.ExerciseEditorScreen
 import com.germanchoconta.gymtracker.ui.management.ExerciseLibraryViewModel
 import com.germanchoconta.gymtracker.ui.management.RoutineEditorScreen
 import com.germanchoconta.gymtracker.ui.management.RoutineLibraryViewModel
+import com.germanchoconta.gymtracker.ui.recovery.RecoveryContextEntry
+import com.germanchoconta.gymtracker.ui.recovery.RecoveryContextViewModel
 import com.germanchoconta.gymtracker.ui.workout.WorkoutLoggerScreen
 import com.germanchoconta.gymtracker.ui.workout.WorkoutLoggerViewModel
 
@@ -56,6 +59,7 @@ fun GymTrackerApp(
     historyRepository: HistoryRepository,
     backupRepository: BackupRepository,
     backupDocumentIo: BackupDocumentIo,
+    recoveryHealthSource: RecoveryHealthSource,
     appVersion: String,
 ) {
     val exerciseViewModel: ExerciseLibraryViewModel = viewModel(
@@ -73,13 +77,18 @@ fun GymTrackerApp(
     val backupViewModel: BackupViewModel = viewModel(
         factory = BackupViewModel.factory(backupRepository, backupDocumentIo, appVersion),
     )
+    val recoveryViewModel: RecoveryContextViewModel = viewModel(
+        factory = RecoveryContextViewModel.factory(recoveryHealthSource),
+    )
     val exerciseState by exerciseViewModel.uiState.collectAsStateWithLifecycle()
     val routineState by routineViewModel.uiState.collectAsStateWithLifecycle()
     val workoutState by workoutViewModel.uiState.collectAsStateWithLifecycle()
     val historyState by historyViewModel.uiState.collectAsStateWithLifecycle()
     val backupState by backupViewModel.uiState.collectAsStateWithLifecycle()
+    val recoveryState by recoveryViewModel.uiState.collectAsStateWithLifecycle()
     var appDestinationName by rememberSaveable { mutableStateOf(AppDestination.EXERCISES.name) }
     var dataManagementOpen by rememberSaveable { mutableStateOf(false) }
+    var recoveryContextOpen by rememberSaveable { mutableStateOf(false) }
     val appDestination = AppDestination.valueOf(appDestinationName)
     val topLevelStateHolder = rememberSaveableStateHolder()
 
@@ -115,6 +124,14 @@ fun GymTrackerApp(
             onFinishConfirmed = workoutViewModel::finishConfirmed,
             onDismissFinish = workoutViewModel::dismissFinishConfirmation,
             onMessageShown = workoutViewModel::clearMessage,
+        )
+        recoveryContextOpen -> RecoveryContextEntry(
+            state = recoveryState,
+            viewModel = recoveryViewModel,
+            onBack = {
+                recoveryContextOpen = false
+                workoutViewModel.recoverActiveWorkout()
+            },
         )
         dataManagementOpen -> BackupScreen(
             state = backupState,
@@ -185,6 +202,7 @@ fun GymTrackerApp(
                         AppDestination.HISTORY -> HistoryScreen(
                             state = historyState,
                             viewModel = historyViewModel,
+                            onRecoveryContext = { recoveryContextOpen = true },
                             onManageData = { dataManagementOpen = true },
                         )
                     }

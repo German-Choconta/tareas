@@ -1,41 +1,50 @@
 package com.germanchoconta.gymtracker.domain
 
-data class SetPerformance(
-    val loadKg: Double,
+data class ProgressionObservation(
+    val workoutId: String,
+    val startedAt: Long,
+    val workoutSetId: String,
+    val setPosition: Int,
+    val loadGrams: Long,
     val reps: Int,
-    val rir: Int? = null,
+    val rirTenths: Int? = null,
 ) {
     init {
-        require(loadKg >= 0.0) { "Load cannot be negative" }
-        require(reps >= 0) { "Repetitions cannot be negative" }
-        require(rir == null || rir >= 0) { "RIR cannot be negative" }
+        require(setPosition >= 0)
+        require(loadGrams >= 0L)
+        require(reps > 0)
+        require(rirTenths == null || rirTenths in 0..100)
     }
-
-    val volumeKg: Double get() = loadKg * reps
 }
 
 data class ProgressionTarget(
     val minReps: Int,
     val maxReps: Int,
-    val targetRir: Int,
-    val loadIncrementKg: Double,
+    val targetRirTenths: Int?,
+    val loadIncrementGrams: Long,
 ) {
     init {
         require(minReps > 0)
         require(maxReps >= minReps)
-        require(targetRir >= 0)
-        require(loadIncrementKg > 0)
+        require(targetRirTenths == null || targetRirTenths in 0..100)
+        require(loadIncrementGrams > 0L)
     }
 }
 
 enum class ProgressionAction {
+    NO_BASELINE,
     INCREASE_LOAD,
-    KEEP_LOAD,
+    HOLD_LOAD,
     REDUCE_LOAD,
+    REVIEW,
 }
 
 data class ProgressionRecommendation(
     val action: ProgressionAction,
-    val suggestedLoadKg: Double,
     val reason: String,
+    val suggestedLoadGrams: Long? = null,
+    val suggestedReps: Int? = null,
+    val previousLoadGrams: Long? = null,
+    val previousReps: Int? = null,
+    val previousRirTenths: Int? = null,
 )

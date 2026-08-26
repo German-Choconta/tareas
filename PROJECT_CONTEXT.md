@@ -1,7 +1,7 @@
 # GymTracker — Project Context & Continuity
 
 > Canonical handoff. Read this first in every GymTracker session, then verify everything directly in GitHub. **GitHub is the source of truth if this file is stale.**
-> Last updated: 2026-08-25 (America/Bogota), during Issue #9 / PR #18 implementation.
+> Last updated: 2026-08-25 (America/Bogota), after Issue #9 / PR #18 merge and successful post-merge validation.
 
 ## 0. Repository, safety, and permanent product direction
 
@@ -16,21 +16,21 @@
 - Room remains canonical truth for active/completed GymTracker workouts.
 - PRs, e1RM, volume, trends, charts, CSV, analytics and recovery context remain derived/read-only/recalculable representations.
 - Paging is query/presentation only, never a retention limit.
-- Do not advance roadmap stages silently. Do not start Issue #10 during Issue #9.
+- Do not advance roadmap stages silently. Read the next real GitHub issue before designing it and wait for explicit user continuation before implementation.
 
-## 1. Completed roadmap through core V1
+## 1. Completed roadmap through Issue #9
 
 ### PR #1 — Android foundation
 - MERGED.
 
 ### PR #11 / Issue #2 — Room local data foundation
 - MERGED / COMPLETED.
-- Squash: `aceaadbcb4a3ea370439556780b3b674e0505350`.
+- Squash `aceaadbcb4a3ea370439556780b3b674e0505350`.
 - Final CI `32801537677` — SUCCESS.
 
 ### PR #12 / Issue #3 — Exercises and Routine Editor
 - MERGED / COMPLETED.
-- Squash: `4915ee7ef0dda4a1bc4b01076bec3ddbba0d5e33`.
+- Squash `4915ee7ef0dda4a1bc4b01076bec3ddbba0d5e33`.
 - Post-merge CI `32805215489` — SUCCESS.
 
 ### PR #13 / Issue #4 — Workout Logger
@@ -71,9 +71,25 @@
 - Post-merge main CI `32904132021` (#171) — SUCCESS; artifacts Room `9584194772`, debug `9584380233`, release `9584380774`.
 - Final V1 release-readiness handoff commit `48a4e30ae4dc1c5556c2d301c05e79534fee4258`.
 - Documentation-head CI `32904960039` (#172) — SUCCESS; artifacts Room `9584461954`, debug `9584543663`, release `9584544633`.
-- Issue #9 work verified that `48a4e30...` was the real `main` head and a direct descendant of PR8 squash before branching.
 
-## 2. Android/toolchain baseline entering PR9
+### PR #18 / Issue #9 — Health Connect recovery context
+- **MERGED / COMPLETED.**
+- Branch used: `feat/health-connect-recovery-context` from verified main `48a4e30ae4dc1c5556c2d301c05e79534fee4258`.
+- Final PR head: `84a4107ff53b56364780ad8c92e54d88f3de5420`.
+- Final PR Android CI: `32924890756` (#201) — SUCCESS.
+- Final PR contract passed on the exact head: JVM tests, semantic Room schema verification, API 35 connected tests (56 tests), lint, debug APK, minified/resource-shrunk release APK, and all artifact uploads.
+- Final PR artifacts: Room schema `9591172894`; debug APK `9591318921`; release APK `9591319691`.
+- Final scope/review audit before ready: 17 changed files, GymTracker/docs only; no Pulso paths; no schema files or backup files changed; no schema v3; only the three intended Health Connect read permissions; no real/sensitive data; workout logger files untouched; active workout retains navigation priority; 0 reviews and 0 review threads.
+- PR was kept draft until the exact final head passed the complete contract, then marked ready.
+- Squash merge used `expected_head_sha=84a4107ff53b56364780ad8c92e54d88f3de5420` and produced `5136ce2a3939c691f8d6ab81f4e102e63ca52481`.
+- PR #18 merged/closed on 2026-08-25 America/Bogota (2026-08-26 UTC).
+- Issue #9 closed automatically with `state_reason=completed`.
+- `main` immediately after merge pointed exactly to `5136ce2a3939c691f8d6ab81f4e102e63ca52481`.
+- Post-merge main Android CI `32926429035` (#202) — SUCCESS.
+- Post-merge main artifacts: Room schema `9591706046`; debug APK `9591852116`; release APK `9591852485`.
+- This `PROJECT_CONTEXT.md` update is the final merged-state handoff for Issue #9; its own documentation-head CI/artifacts must be verified before moving to the next stage.
+
+## 2. Android/toolchain baseline after PR9
 
 - Native Android / Kotlin / Jetpack Compose / Material 3.
 - Package `com.germanchoconta.gymtracker`.
@@ -83,7 +99,8 @@
 - Room `3.0.1`; KSP `2.3.10`; bundled SQLite `2.7.0`.
 - Paging `3.5.1`; Room Paging `3.0.1`; Vico `3.2.3`.
 - `kotlinx-serialization-json/core` `1.8.1`.
-- PR9 adds stable `androidx.health.connect:connect-client:1.1.0` only; no WorkManager/background-sync dependency.
+- Health Connect stable client `androidx.health.connect:connect-client:1.1.0`.
+- No WorkManager/background-sync dependency was added by PR9.
 
 Architecture rules:
 - unidirectional data flow and immutable UI state;
@@ -96,7 +113,7 @@ Architecture rules:
 
 ## 3. Room / workout invariants — unchanged by PR9
 
-- DB version remains **2**; schemas v1/v2 committed; no schema v3 is justified by PR9.
+- DB version remains **2**; schemas v1/v2 remain committed; PR9 created no schema v3.
 - Canonical entities remain Exercise, Muscle, ExerciseMuscle, Routine, RoutineExercise, Workout, WorkoutExercise and WorkoutSet.
 - Stable String IDs; load truth Long grams; RIR nullable Int tenths; timestamps Long epoch millis; Double never canonical metric truth.
 - Exercise → workout history uses RESTRICT/archive flow; routine historical references preserve SET_NULL semantics; workout aggregate children cascade only inside the workout aggregate.
@@ -115,10 +132,10 @@ Logger/History/PR/Progress semantics remain exactly PR4–PR6:
 - Restore remains validated preview + explicit replace-all confirmation + one atomic Room write transaction + equality verification.
 - CSV is export-only and never restore input.
 - No broad storage permission.
-- Health Connect raw/normalized data is **not** added to portable backup or CSV by PR9.
-- PR9 does not alter backup format/version, restore semantics, or schema.
+- Health Connect raw/normalized data is **not** in portable backup or CSV.
+- PR9 did not alter backup format/version, restore semantics, or Room schema.
 
-## 5. PR8 hardening / CI contract — must remain green
+## 5. PR8 hardening / CI contract — still mandatory
 
 PR8 accessibility, Material light/dark behavior, 320×640-class small-screen support, loading/error/empty states, recreation safeguards, destructive finish guards and evidenced query improvements remain part of V1.
 
@@ -133,98 +150,80 @@ Every PR/main push must preserve:
 8. debug APK artifact;
 9. release APK artifact.
 
-Never accept an older SHA as evidence for a newer PR head.
+Never accept an older SHA as evidence for a newer head.
 
-## 6. Issue #9 / PR #18 — Health Connect recovery context
+## 6. Final Issue #9 design contract
 
-Issue #9: `Post-V1 — Health Connect recovery context`.
+Issue #9 goal was optional health/recovery context through Health Connect with explicit user permission. The final implementation intentionally remains narrower than all data Health Connect could expose.
 
-Verified GitHub issue goal:
-optionally import health/recovery context through Health Connect with explicit user permission.
+### Health Connect access
 
-Verified issue guardrails:
-- logger works with zero health permissions;
-- no medical diagnosis framing;
-- no automatic prescribed-load changes from recovery;
-- raw health input remains separate from derived context/correlations;
-- permission/deletion controls.
-
-### Real branch / PR
-
-- Branch: `feat/health-connect-recovery-context`, created from verified main `48a4e30ae4dc1c5556c2d301c05e79534fee4258`.
-- Draft PR #18: `GymTracker PR 9: Health Connect recovery context`.
-- PR remains draft until exact-head full CI and final review/scope audit are green.
-- Do not start Issue #10 from this branch.
-
-### Current research-backed PR9 decisions
-
-Research was re-done on 2026-08-25 using current Android Developers / Jetpack Health Connect, Google Play Health policy/publishing guidance, and Samsung developer interoperability documentation. Details and source URLs are in `docs/PR9_HEALTH_CONNECT_DESIGN.md`.
-
-Decisions:
-- stable Health Connect client `1.1.0`;
-- Health Connect optional/read-only and accessed only after the user explicitly opens the recovery feature;
-- foreground/on-demand reads only;
-- **no** `READ_HEALTH_DATA_IN_BACKGROUND`;
-- **no** `READ_HEALTH_DATA_HISTORY`;
-- **no** WorkManager;
-- requested read permissions only:
+- Health Connect is optional and read-only.
+- Foreground/on-demand reads only.
+- GymTracker does not query Health Connect during normal startup; access occurs only when the recovery route is explicitly opened.
+- Permission UI is user-initiated only; no prompt on app startup or workout start.
+- Requested reads only:
   - `READ_SLEEP` → `SleepSessionRecord`;
   - `READ_RESTING_HEART_RATE` → `RestingHeartRateRecord`;
-  - `READ_HEART_RATE_VARIABILITY` → `HeartRateVariabilityRmssdRecord`;
-- no generic heart-rate permission, no exercise-session permission, no Health Connect write permission;
-- no `ExerciseSessionRecord` import because GymTracker already owns canonical workout history and duplicate session truth has no demonstrated PR9 value;
-- no composite recovery score in PR9; display individual metrics and limitations instead;
-- Samsung Health is not a dependency. Current Samsung documentation supports Health Connect sleep/stages, generic heart rate and exercise synchronization but does not document `RestingHeartRateRecord` or HRV RMSSD interoperability, so PR9 does not promise those Samsung-specific records.
+  - `READ_HEART_RATE_VARIABILITY` → `HeartRateVariabilityRmssdRecord`.
+- No `READ_HEALTH_DATA_IN_BACKGROUND`.
+- No `READ_HEALTH_DATA_HISTORY`.
+- No generic heart-rate permission.
+- No Health Connect write permission.
+- No `ExerciseSessionRecord` permission/import.
+- No WorkManager/background reads.
+- Samsung Health is not a dependency and GymTracker does not promise Samsung HRV/RHR interoperability where current Samsung documentation does not guarantee it.
 
 ### Data boundary / privacy
 
-PR9 data flow:
+Final PR9 flow:
 `Health Connect raw records → minimal raw DTO boundary → deterministic normalized recovery context → read-only UI`.
 
 Canonical training flow remains separate:
 `Room Workout / WorkoutExercise / WorkoutSet → GymTracker canonical workout truth`.
 
 Data minimization:
-- no Health Connect record persistence in Room;
+- no Health Connect persistence in Room;
 - no schema v3;
 - no portable backup/CSV health data;
 - no backend/cloud health upload;
-- no health values in logging/analytics/crash text;
-- no record IDs, notes, device identifiers or unused payload fields retained by GymTracker;
+- no health values in logs;
+- no record IDs, notes, device identifiers or unused payload retained;
 - only source package, relevant timestamps/zone offsets/stages and metric values cross the adapter boundary;
-- disconnect revokes GymTracker Health Connect permissions and clears ephemeral in-memory context;
+- disconnect clears ephemeral context first and revokes GymTracker Health Connect permissions; local context remains cleared even if provider revocation fails;
 - PR9 does not delete another app's source records.
 
-`docs/HEALTH_CONNECT_PRIVACY_NOTICE.md` and the in-app Health Connect rationale state the same substantive policy. Before a Play production publication using health permissions, that policy must also exist at the public Play Console privacy-policy URL and required Health Apps/Data Safety declarations must be completed; PR9 does not invent a production URL.
+`docs/HEALTH_CONNECT_PRIVACY_NOTICE.md`, the in-app permission rationale and `docs/PR9_HEALTH_CONNECT_DESIGN.md` document the same boundary. A future Play production publication using health permissions still requires the corresponding public privacy-policy URL and Play Health Apps/Data Safety declarations; PR9 does not invent a production URL.
 
 ### Time/source semantics
 
-- Instant RHR/HRV records are grouped using the current `ZoneId` calendar day.
-- Day boundaries use `LocalDate.atStartOfDay(zone)` and are tested across 23-hour/25-hour DST days.
+- Instant RHR/HRV records use the current `ZoneId` calendar day.
+- Day boundaries use `LocalDate.atStartOfDay(zone)` and remain DST-safe across 23-hour/25-hour days.
 - Sleep is read from a bounded previous-day-start → next-day-start interval and assigned to the calendar day on which the session ends.
 - A sleep record's own `endZoneOffset` wins for end-day assignment; current zone is fallback only.
 - Naps/multiple sleep sessions remain separate.
-- Multiple Health Connect origins remain separate. No heuristic cross-source deduplication is invented.
-- RHR and HRV UI uses the latest record per source for the selected current recovery day.
+- Multiple Health Connect origins remain separate; no heuristic cross-source deduplication is invented.
+- RHR and HRV UI uses the latest record per source for the selected recovery day.
 - HRV is explicitly RMSSD in milliseconds and is never conflated with SDNN/other HRV metrics.
 
 ### UX/state semantics
 
-- Access is a secondary action from History, not a bottom-navigation redesign.
-- Active workout still has screen priority; PR4 logger behavior is unchanged.
-- Permission dialog is user-initiated only; no prompt on app startup or workout start.
-- Explicit states: provider unavailable, provider install/update required, no permissions, partial permissions, granted/no records, loaded context, permission changed/revoked during read, provider read error + retry.
-- No diagnosis/prescription language and no automatic change to PREVIOUS/TARGET/TODAY.
-- Rationale hooks for Android 13− / Android 14+ are declared in the manifest.
+- Recovery context is a secondary action from History, not a bottom-navigation redesign.
+- Active workout still has screen priority; PR4 logger behavior is unchanged and the logger works completely with zero health permissions.
+- Explicit states remain provider unavailable, provider install/update required, no permissions, partial permissions, granted/no records, loaded context, permission changed/revoked during read, and provider read error + retry.
+- No aggressive permission loop.
+- No diagnosis/prescription language.
+- No composite recovery score.
+- No automatic change to PREVIOUS/TARGET/TODAY or progression prescription.
+- Rationale hooks for Android 13− / Android 14+ remain declared in the manifest.
+- Recovery route refresh survives recreation/process restoration by refreshing when that explicitly selected route is composed.
 
 ### Test boundary
 
-All new fixtures are synthetic/non-identifying.
-
-Coverage added includes:
+All PR9 fixtures are synthetic/non-identifying. Coverage includes:
 - DST-safe day windows;
 - sleep crossing midnight and recorded-end-offset assignment;
-- clipped/deterministic sleep stage duration normalization;
+- clipped/deterministic sleep-stage duration normalization;
 - multiple origins kept separate;
 - latest RHR/HRV per origin;
 - unavailable / denied / partial / granted-empty / loaded states;
@@ -232,35 +231,43 @@ Coverage added includes:
 - recoverable provider error/retry;
 - disconnect clears ephemeral context;
 - narrow-screen recovery UI + accessibility checks;
-- existing PR4–PR8 suites remain required by CI and Health Connect is isolated behind a testable interface so CI needs no real provider.
+- existing PR4–PR8 suites under the same CI contract;
+- Health Connect isolated behind a testable interface so CI requires no real provider or real health data.
 
-## 7. Current PR9 execution status
+## 7. Issue #9 closure evidence
 
-At this handoff update:
-- Issue #9 is still open, as expected while draft PR #18 is unmerged.
-- PR #18 is draft and mergeable.
-- Implementation/docs/tests are on `feat/health-connect-recovery-context`.
-- Latest code before this handoff commit moved Health Connect refresh to explicit recovery-screen open; construction of the root app no longer checks Health Connect permissions/data automatically.
-- An earlier exact-head CI #190 (`32911644093`) began on `0fc511fc3023c18192793bba8009629ced94679c`, but subsequent privacy-hardening commits make that run stale for final evidence even if it succeeds.
-- Final readiness still requires a new exact-head full CI, artifact verification, diff/security/scope audit, and review-thread audit.
+Final PR evidence:
+- PR #18 final head `84a4107ff53b56364780ad8c92e54d88f3de5420`.
+- CI #201 / run `32924890756` — SUCCESS.
+- Artifacts: schema `9591172894`, debug `9591318921`, release `9591319691`.
+- Reviews: 0.
+- Review threads: 0.
+- PR was ready only after exact-head green evidence.
 
-## 8. Required completion sequence for Issue #9
+Merge evidence:
+- squash `5136ce2a3939c691f8d6ab81f4e102e63ca52481` using expected-head protection;
+- Issue #9 closed/completed automatically;
+- main pointed exactly to the squash immediately after merge.
 
-1. Verify exact current PR head and full CI.
-2. Fix any compile/test/lint/release failures on the exact head.
-3. Verify no schema v3, no backup semantic changes, no Pulso paths, no real/sensitive data, no unnecessary permissions and no review threads.
-4. Verify Room schema + debug APK + release APK artifacts for the exact head.
-5. Only then mark PR #18 ready.
-6. Squash merge using `expected_head_sha`.
-7. Verify Issue #9 closed/completed.
-8. Verify post-merge `main` Android CI and all three artifacts.
-9. Update this handoff on merged `main` with exact final PR head, CI/artifact IDs and squash SHA.
-10. Verify the documentation-head Android CI and all three artifacts.
-11. Read real Issue #10 directly from GitHub, but **do not implement it**.
-12. Deliver the full prompt for the actual next stage defined by GitHub.
+Post-merge evidence:
+- Android CI #202 / run `32926429035` — SUCCESS;
+- all required steps passed: JVM, semantic Room schemas, API 35 connected tests, lint, debug build, release build, uploads;
+- artifacts: schema `9591706046`, debug `9591852116`, release `9591852485`.
+
+No Issue #10 implementation has started.
+
+## 8. Immediate next action after this handoff commit
+
+1. Verify Android CI on the exact documentation head created by this `PROJECT_CONTEXT.md` update.
+2. Verify its Room schema, debug APK and release APK artifacts.
+3. Confirm Issue #9 remains closed/completed and PR #18 remains merged.
+4. Only after those checks, read Issue #10 directly from GitHub.
+5. Do **not** implement Issue #10 in the same stage.
+6. Deliver the complete continuation prompt for the actual Issue #10 body currently in GitHub.
 
 ## 9. Roadmap boundary
 
-- PR1–PR8 / Issues #2–#8: completed as documented above.
-- **Issue #9: current active stage; do not declare complete until merge + post-merge + documentation-head validation are done.**
-- Issue #10: post-V1 Wear OS companion is currently known to exist/open, but its exact current body must be re-read after Issue #9 completion before preparing the next prompt. Do not begin Issue #10 silently.
+- PR1–PR8 / Issues #2–#8: completed.
+- **Issue #9 / PR #18: merged/completed and post-merge validated.**
+- The documentation-head CI generated by this final handoff update is the last validation gate for the Issue #9 stage.
+- Issue #10 has not been started. Its exact current title/body must be read from GitHub only after the documentation-head validation is green.

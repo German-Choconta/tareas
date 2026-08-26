@@ -1,61 +1,144 @@
 package com.germanchoconta.gymtracker.domain
 
-import kotlin.math.max
-
 object ProgressionEngine {
+    private val newestFirst = compareByDescending<ProgressionObservation> { it.startedAt }
+        .thenByDescending { it.workoutId }
+        .thenByDescending { it.workoutSetId }
+
     /**
-     * Conservative double-progression rule for working sets.
-     * The engine never invents a performance target from recovery data.
+     * Conservative, deterministic double-progression guidance for one set position.
+     * Recommendations are derived output only; callers decide whether to apply a suggested load.
      */
     fun recommend(
-        currentLoadKg: Double,
-        lastSession: List<SetPerformance>,
+        setPosition: Int,
+        observations: List<ProgressionObservation>,
         target: ProgressionTarget,
-        consecutiveUnderTargetSessions: Int = 0,
     ): ProgressionRecommendation {
-        require(currentLoadKg >= 0.0)
-        require(consecutiveUnderTargetSessions >= 0)
+        require(setPosition >= 0)
 
-        if (lastSession.isEmpty()) {
+        val comparable = observations
+            .asSequence()
+            .filter { it.setPosition == setPosition }
+            .sortedWith(newestFirst)
+            .distinctBy { it.workoutId }
+            .toList()
+        val latest = comparable.firstOrNull()
+            ?: return ProgressionRecommendation(
+                action = ProgressionAction.NO_BASELINE,
+                reason = "No hay una serie WORK completada y comparable para esta posición todavía.",
+            )
+
+        if (latest.loadGrams == 0L) {
             return ProgressionRecommendation(
-                action = ProgressionAction.KEEP_LOAD,
-                suggestedLoadKg = currentLoadKg,
-                reason = "No hay una sesión previa comparable; repite la carga y crea una referencia.",
+                action = ProgressionAction.HOLD_LOAD,
+                reason = "La referencia no usa carga externa; progresa con repeticiones o esfuerzo sin inventar peso.",
+                suggestedReps = nextRepAim(latest.reps, target),
+                previousLoadGrams = latest.loadGrams,
+                previousReps = latest.reps,
+                previousRirTenths = latest.rirTenths,
             )
         }
 
-        val allAtTopOfRange = lastSession.all { set ->
-            set.reps >= target.maxReps && (set.rir == null || set.rir >= target.targetRir)
-        }
+        if (latest.reps >= target.maxReps) {
+            val targetRir = target.targetRirTenths
+            val actualRir = latest.rirTenths
+            if (targetRir != null && actualRir != null && actualRir < targetRir) {
+                return recommendationFromLatest(
+                    action = ProgressionAction.HOLD_LOAD,
+                    latest = latest,
+                    reason = "Llegaste al techo de reps, pero el RIR registrado fue menor al objetivo; mantén la carga.",
+                    suggestedLoadGrams = latest.loadGrams,
+                    suggestedReps = target.maxReps,
+                )
+            }
 
-        if (allAtTopOfRange) {
-            return ProgressionRecommendation(
+            val increased = try {
+                Math.addExact(latest.loadGrams, target.loadIncrementGrams)
+            } catch (_: ArithmeticException) {
+                return recommendationFromLatest(
+                    action = ProgressionAction.REVIEW,
+                    latest = latest,
+                    reason = "La suma de carga excede el rango entero seguro; revisa el incremento configurado.",
+                )
+            }
+            val rirClause = when {
+                targetRir == null -> ""
+                actualRir == null -> " El esfuerzo no se registró, así que la decisión usa solo reps."
+                else -> " El RIR registrado no contradice el objetivo."
+            }
+            return recommendationFromLatest(
                 action = ProgressionAction.INCREASE_LOAD,
-                suggestedLoadKg = currentLoadKg + target.loadIncrementKg,
-                reason = "Todas las series alcanzaron el techo de repeticiones sin superar el esfuerzo objetivo.",
+                latest = latest,
+                reason = "La referencia alcanzó el techo de ${target.maxReps} reps.$rirClause",
+                suggestedLoadGrams = increased,
+                suggestedReps = target.minReps,
             )
         }
 
-        val belowFloor = lastSession.count { it.reps < target.minReps }
-        val majorityBelowFloor = belowFloor > lastSession.size / 2
-        if (majorityBelowFloor && consecutiveUnderTargetSessions >= 1) {
-            return ProgressionRecommendation(
-                action = ProgressionAction.REDUCE_LOAD,
-                suggestedLoadKg = max(0.0, currentLoadKg - target.loadIncrementKg),
-                reason = "La mayoría de series quedó por debajo del rango durante sesiones consecutivas.",
+        if (latest.reps >= target.minReps) {
+            return recommendationFromLatest(
+                action = ProgressionAction.HOLD_LOAD,
+                latest = latest,
+                reason = "La referencia está dentro del rango; mantén la carga e intenta sumar una repetición.",
+                suggestedLoadGrams = latest.loadGrams,
+                suggestedReps = nextRepAim(latest.reps, target),
             )
         }
 
-        return ProgressionRecommendation(
-            action = ProgressionAction.KEEP_LOAD,
-            suggestedLoadKg = currentLoadKg,
-            reason = "Mantén la carga e intenta sumar repeticiones dentro del rango antes de subir peso.",
+        val previous = comparable.getOrNull(1)
+        if (previous == null || previous.reps >= target.minReps) {
+            return recommendationFromLatest(
+                action = ProgressionAction.HOLD_LOAD,
+                latest = latest,
+                reason = "Una sola sesión por debajo del rango no justifica reducir la carga.",
+                suggestedLoadGrams = latest.loadGrams,
+                suggestedReps = target.minReps,
+            )
+        }
+
+        if (previous.loadGrams != latest.loadGrams) {
+            return recommendationFromLatest(
+                action = ProgressionAction.REVIEW,
+                latest = latest,
+                reason = "Las dos referencias bajo rango usaron cargas distintas; revisa el contexto antes de reducir.",
+                suggestedReps = target.minReps,
+            )
+        }
+
+        val reduced = if (target.loadIncrementGrams >= latest.loadGrams) {
+            0L
+        } else {
+            latest.loadGrams - target.loadIncrementGrams
+        }
+        return recommendationFromLatest(
+            action = ProgressionAction.REDUCE_LOAD,
+            latest = latest,
+            reason = "Dos sesiones comparables consecutivas quedaron bajo ${target.minReps} reps con la misma carga.",
+            suggestedLoadGrams = reduced,
+            suggestedReps = target.minReps,
         )
     }
 
-    fun estimatedOneRepMaxEpley(loadKg: Double, reps: Int): Double {
-        require(loadKg >= 0.0)
-        require(reps > 0)
-        return loadKg * (1.0 + reps / 30.0)
-    }
+    private fun nextRepAim(reps: Int, target: ProgressionTarget): Int =
+        when {
+            reps < target.minReps -> target.minReps
+            reps >= target.maxReps -> target.maxReps
+            else -> reps + 1
+        }
+
+    private fun recommendationFromLatest(
+        action: ProgressionAction,
+        latest: ProgressionObservation,
+        reason: String,
+        suggestedLoadGrams: Long? = null,
+        suggestedReps: Int? = null,
+    ) = ProgressionRecommendation(
+        action = action,
+        reason = reason,
+        suggestedLoadGrams = suggestedLoadGrams,
+        suggestedReps = suggestedReps,
+        previousLoadGrams = latest.loadGrams,
+        previousReps = latest.reps,
+        previousRirTenths = latest.rirTenths,
+    )
 }

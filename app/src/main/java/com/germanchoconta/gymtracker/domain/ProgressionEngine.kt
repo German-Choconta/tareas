@@ -29,13 +29,11 @@ object ProgressionEngine {
             )
 
         if (latest.loadGrams == 0L) {
-            return ProgressionRecommendation(
+            return recommendationFromLatest(
                 action = ProgressionAction.HOLD_LOAD,
+                latest = latest,
                 reason = "La referencia no usa carga externa; progresa con repeticiones o esfuerzo sin inventar peso.",
                 suggestedReps = nextRepAim(latest.reps, target),
-                previousLoadGrams = latest.loadGrams,
-                previousReps = latest.reps,
-                previousRirTenths = latest.rirTenths,
             )
         }
 
@@ -134,11 +132,28 @@ object ProgressionEngine {
         suggestedReps: Int? = null,
     ) = ProgressionRecommendation(
         action = action,
-        reason = reason,
+        reason = "${baseWorkEvidence(latest)}\n$reason",
         suggestedLoadGrams = suggestedLoadGrams,
         suggestedReps = suggestedReps,
         previousLoadGrams = latest.loadGrams,
         previousReps = latest.reps,
         previousRirTenths = latest.rirTenths,
     )
+
+    private fun baseWorkEvidence(observation: ProgressionObservation): String {
+        val rir = observation.rirTenths?.let { " · RIR ${rirTenthsText(it)}" }.orEmpty()
+        return "BASE WORK • ${loadKilogramsText(observation.loadGrams)} kg × ${observation.reps}$rir"
+    }
+
+    private fun loadKilogramsText(grams: Long): String {
+        val whole = grams / 1_000L
+        val fraction = (grams % 1_000L).toString().padStart(3, '0').trimEnd('0')
+        return if (fraction.isEmpty()) whole.toString() else "$whole.$fraction"
+    }
+
+    private fun rirTenthsText(tenths: Int): String {
+        val whole = tenths / 10
+        val fraction = tenths % 10
+        return if (fraction == 0) whole.toString() else "$whole.$fraction"
+    }
 }

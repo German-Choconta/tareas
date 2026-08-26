@@ -1,7 +1,7 @@
 # GymTracker — Project Context & Continuity
 
 > Canonical handoff. Read this first in every GymTracker session, then verify everything directly in GitHub. **GitHub is the source of truth if this file is stale.**
-> Last updated: 2026-08-26 (America/Bogota), after Issue #10 / PR #19 merge, successful implementation validation, and final documentation-head gate investigation.
+> Last updated: 2026-08-26 (America/Bogota), during Issue #21 / PR #22 implementation, after successful CI #225 on the stabilized implementation head and before the final exact-head gate.
 
 ## Repository and permanent rules
 
@@ -228,4 +228,90 @@ Therefore the documentation-head gate is resolved as an **execution/infrastructu
 
 This documentation update exists only to record that resolution. Do **not** create an infinite chain of documentation-only commits solely to demand CI for the commit that documents the previous CI state. A future product/code/configuration change must still be validated on its own exact head under the normal hardened CI contract.
 
-Issue #10 is considered technically/documentally closed under that distinction. Before starting another implementation stage, read the real open GitHub issues directly; if none are open, do not invent or silently start Issue #11.
+Issue #10 is considered technically/documentally closed under that distinction.
+
+## Issue #21 / PR #22 — DRAFT IMPLEMENTATION STATE
+
+Issue #21: **Post-V1 — Deterministic progression recommendations**.
+PR #22: `GymTracker PR 11: deterministic progression recommendations`.
+Branch: `feat/deterministic-progression-recommendations`.
+Design contract: `docs/ISSUE21_PROGRESSION_DESIGN.md`.
+
+Issue #21 was created only after verifying the real GitHub state; GitHub assigned number **#21**. Do not rename/re-number it to an assumed Issue #11.
+
+### Baseline and pre-implementation gate
+
+The feature branch was created from exact main `508e0c75127fb784f85895dc5bbb7e288e52c07b`.
+
+Android CI #223 (`32991824542`) on that exact main head initially failed only the dedicated Wear connected test `WearWorkoutScreenTest.noActiveWorkoutStaysMinimal` with `No compose hierarchies found in the app`. The entire `test-build` job passed. A safe re-run of only the failed Wear job then passed on the same exact SHA; attempt 2 of #223 was **SUCCESS**. Treat the first failure as an observed instrumentation flake, not a reproducible product regression.
+
+### Progression architecture locked for Issue #21
+
+- One progression engine only: evolve the pre-existing foundational `ProgressionEngine`; do not create a parallel coaching engine.
+- Production truth uses integer grams (`Long`) and RIR tenths (`Int?`), not `Double` kilograms.
+- Recommendations are derived/recalculable output and are never persisted as canonical history/routine truth.
+- Room remains version **2**, schemas **v1/v2 only**; no recommendation cache/table/column and no schema v3.
+- Evidence is only completed `WORK` sets from finished workouts, with reps > 0.
+- `WARMUP`, `DROP`, `FAILURE`, incomplete sets and active workouts cannot drive normal double progression.
+- Existing `ANY_WORKOUT` / `SAME_ROUTINE` semantics remain canonical.
+- Comparison is per same set position with deterministic newest ordering and at most one observation per prior workout.
+- Legacy/incomplete TARGET snapshots degrade to no recommendation rather than inventing defaults.
+- Zero/bodyweight load never generates a made-up positive external load.
+- Top-of-range can increase exact configured load increment; optional RIR can conservatively block an increase when actual effort was harder than target.
+- Missing actual RIR does not block progression; rationale states when the decision is reps-only.
+- In-range performance holds load and suggests a non-canonical next-rep aim.
+- One under-range session never triggers reduction.
+- Reduction requires the latest two different comparable finished workouts to be under-range at the same exact positive load; differing loads produce `REVIEW`.
+- Checked integer addition prevents overflow; unsafe arithmetic produces `REVIEW`.
+- Each recommendation carries explicit `BASE WORK` evidence (load/reps and optional RIR) before its explanation.
+- PR5 `PersonalRecordEngine.estimatedOneRepMax` remains the sole canonical e1RM implementation; the duplicate Epley helper was removed from `ProgressionEngine`.
+
+### User-control / UI contract
+
+- Recommendations appear in the phone workout logger with TARGET / PREVIOUS / TODAY.
+- User sees a structured action (`NO_BASELINE`, `INCREASE_LOAD`, `HOLD_LOAD`, `REDUCE_LOAD`, `REVIEW`), concrete evidence and rationale.
+- `Aplicar <kg>` is explicit user action only.
+- Applying a suggestion routes through the existing TODAY load autosave path and changes only active set load.
+- It never writes suggested reps as performed reps, never writes RIR/completion/history, and never mutates routine targets.
+- User can ignore or override every recommendation.
+- Wear recommendation UI/protocol is out of scope and unchanged.
+- Health Connect remains optional/read-only context and never modifies prescribed load in this issue.
+
+### Validation history before the final gate
+
+Initial PR CI #224 (`32996149558`) on head `4d5087411c117df54c6e9f6456171cbd5fcd7fdd` failed during mobile unit-test compilation because the existing synthetic `HistoryViewModelTest.FakeHistoryDao` had not yet implemented the newly added read-only DAO method. Production Kotlin compilation had already passed. The fake was updated with an empty synthetic implementation; no History semantics changed.
+
+Stabilized head `b6eef192432563271ff9df52cf7332c85bce479b` then passed Android CI #225 (`32996421831`) completely:
+
+- `test-build` — SUCCESS;
+- `wear-connected` — SUCCESS;
+- mobile JVM tests — SUCCESS;
+- Wear protocol/Wear JVM tests — SUCCESS;
+- semantic Room schema verification — SUCCESS;
+- mobile API 35 connected tests — SUCCESS;
+- mobile lint — SUCCESS;
+- Wear/protocol lint — SUCCESS;
+- mobile debug/release builds — SUCCESS;
+- Wear debug/release builds — SUCCESS;
+- all expected uploads — SUCCESS.
+
+Artifacts from CI #225 / `b6eef192...`:
+
+- `gymtracker-room-schema` — `9616778236`;
+- `gymtracker-debug-apk` — `9617030304`;
+- `gymtracker-release-apk` — `9617031787`;
+- `gymtracker-wear-debug-apk` — `9617033521`;
+- `gymtracker-wear-release-apk` — `9617034610`.
+
+### Final-candidate additions in the commit containing this handoff
+
+The commit containing this section also adds final acceptance hardening:
+
+- recommendation explanations begin with concrete `BASE WORK` evidence using exact integer-derived kg/RIR formatting;
+- a JVM test locks that evidence string;
+- an Android instrumentation test uses real in-memory Room + the real `WorkoutLoggerViewModel` to prove explicit `applySuggestedLoad()` persists only `loadGrams` while preserving reps, RIR, type, completion and TARGET snapshot;
+- the same instrumentation test proves a legacy/incomplete TARGET snapshot produces no recommendation even when valid comparable history exists.
+
+**Do not mark PR #22 ready and do not merge it based on CI #225 alone.** The exact GitHub head after this final-candidate commit must pass the complete hardened Android CI contract again. Verify the final SHA, both jobs, all five artifacts, PR diff/reviews/comments and scope/privacy audit directly in GitHub before ready/merge. GitHub wins if this section is stale.
+
+Do not start another issue while #21 / PR #22 is open.

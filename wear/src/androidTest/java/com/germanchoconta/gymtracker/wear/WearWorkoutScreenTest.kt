@@ -46,13 +46,16 @@ class WearWorkoutScreenTest {
 
         scrollToItem(4)
         composeRule.onNodeWithText("PREVIOUS  75 kg × 8 • RIR 2").assertIsDisplayed()
+        scrollToItem(5)
         composeRule.onNodeWithText("TARGET  6–10 reps • RIR 2").assertIsDisplayed()
-
         scrollToItem(6)
+        composeRule.onNodeWithText("TODAY  80 kg × 8 • RIR 2").assertIsDisplayed()
+
+        scrollToItem(8)
         composeRule.onNodeWithContentDescription("Increase Reps").performClick()
         assertEquals(1, repsUps)
 
-        scrollToItem(9)
+        scrollToItem(11)
         composeRule.onNodeWithContentDescription("Complete current set").assertIsDisplayed()
     }
 
@@ -86,7 +89,7 @@ class WearWorkoutScreenTest {
     }
 
     private fun scrollToItem(index: Int) {
-        composeRule.onNodeWithTag("wear-workout-list").performScrollToIndex(index)
+        composeRule.onNodeWithTag(WORKOUT_LIST_TEST_TAG).performScrollToIndex(index)
     }
 
     private fun syntheticUiState() = WearWorkoutUiState(

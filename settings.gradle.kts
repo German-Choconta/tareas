@@ -16,3 +16,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "GymTracker"
 include(":app")
+include(":wear-protocol")
+include(":wear")

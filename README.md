@@ -6,15 +6,19 @@ The canonical product and engineering handoff is [PROJECT_CONTEXT.md](PROJECT_CO
 
 ## Current stage
 
-The V1 feature set is implemented. Post-V1 work is now focused on **release readiness and integrated acceptance** in Issue #23, not on expanding feature scope.
+The V1 feature set and the Post-V1 integrated release-readiness gate are complete. Issue #23 is **CLOSED / completed** and PR #24 is **CLOSED / MERGED**.
 
-The acceptance goal is to prove the complete product loop:
+GymTracker is now a **code-level release candidate** at **1.0.0-rc1**. The post-merge gate passed on squash commit `0122cf0fb557e10de51e6e3fbf0cf75b15d74957` in Android CI #230 / run `33016383780`.
+
+The validated product loop remains:
 
 **LOG → COMPARE → UNDERSTAND → PROGRESS**
 
-while keeping the workout logger centered on:
+with the workout logger centered on:
 
 **PREVIOUS + TARGET + TODAY**
+
+No new feature scope is active. A `v1.0.0-rc1` tag/GitHub prerelease is a separate checkpoint and requires explicit approval.
 
 ## Implemented product
 

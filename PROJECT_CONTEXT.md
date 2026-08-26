@@ -1,7 +1,7 @@
 # GymTracker — Project Context & Continuity
 
 > Canonical handoff. Read this first in every GymTracker session, then verify everything directly in GitHub. **GitHub is the source of truth if this file is stale.**
-> Last updated: 2026-08-26 (America/Bogota), during Issue #21 / PR #22 implementation, after successful CI #225 on the stabilized implementation head and before the final exact-head gate.
+> Last updated: 2026-08-26 (America/Bogota), after final closure of Issue #23 / PR #24 and successful post-merge Android CI #230, during the one-time documentation alignment before any `v1.0.0-rc1` tag or GitHub prerelease.
 
 ## Repository and permanent rules
 
@@ -260,37 +260,93 @@ Final contract retained:
 - Health Connect remains optional/read-only and separate from prescription;
 - backup/restore/CSV semantics remain unchanged.
 
-## Issue #23 — Release readiness and integrated acceptance — ACTIVE
+## Issue #23 / PR #24 — FINAL CLOSED STATE
 
-GitHub assigned the real issue number **#23** on 2026-08-26 after a fresh backlog check returned zero open issues and zero open PRs and no equivalent issue.
+Issue #23: **Post-V1 — Release readiness and integrated acceptance**.  
+PR #24: **GymTracker: release readiness and integrated acceptance**.  
+Branch used: `feat/release-readiness-integrated-acceptance`.
 
-Issue title: **Post-V1 — Release readiness and integrated acceptance**.
-Branch: feat/release-readiness-integrated-acceptance.
-Exact branch base: 26ba5f5d1c7e167310755203383067305ac2a338.
+### Final merge state
 
-The issue Definition of Done requires integrated synthetic acceptance of LOG → COMPARE → UNDERSTAND → PROGRESS while preserving PREVIOUS + TARGET + TODAY, all PR4–PR11 semantics, Room v2/schemas 1–2, Health Connect optional/read-only behavior, and phone-canonical Wear semantics.
+Verified directly in GitHub after merge:
 
-Verified release-readiness findings before implementation:
+- Issue #23 — **CLOSED / completed**, closed automatically through the merged PR.
+- PR #24 — **CLOSED / MERGED**, `draft=false`.
+- Final PR head before merge: `410e7836a059b3d47918756b08ce9b41114263d8`.
+- Squash/main commit: `0122cf0fb557e10de51e6e3fbf0cf75b15d74957`.
+- Squash tree: `28b6aca74655be2840a3fcd903e91f8f85e0f6bb`.
+- Parent pre-merge main: `26ba5f5d1c7e167310755203383067305ac2a338`.
 
-- phone version was versionCode 1 / versionName 0.1.0;
-- Wear version was versionCode 10001 / versionName 0.1.0;
-- both share applicationId com.germanchoconta.gymtracker;
-- compileSdk is 37 and targetSdk is 36;
-- release variants are minified and resource-shrunk;
-- no release signing configuration or signing secrets exist in the repository;
-- README still incorrectly described the project as Repository initialization;
-- no GitHub Releases existed.
+### Post-merge main validation
 
-Issue #23 changes the release-candidate versionName to **1.0.0-rc1** while retaining the first unpublished phone/Wear version codes 1 and 10001. CI remains secret-free and adds unsigned phone AAB + release metadata/checksum evidence; production signing remains an external distribution step.
+Android CI run `33016383780` (#230), event `push`, exact head `0122cf0fb557e10de51e6e3fbf0cf75b15d74957` — **SUCCESS**.
 
-Integrated acceptance is implemented in ReleaseIntegratedAcceptanceTest using only synthetic, non-identifying data and production Room/repository/ViewModel/domain paths. Existing focused Health Connect, Wear, accessibility, backup, History and analytics gates remain authoritative for their specialized contracts.
+Both jobs passed:
 
-See docs/ISSUE23_RELEASE_READINESS.md for the acceptance matrix and distribution boundary.
+- `test-build` — SUCCESS;
+- `wear-connected` — SUCCESS.
 
-PR #24: **GymTracker: release readiness and integrated acceptance**.
-State at documentation alignment: OPEN / DRAFT.
-The PR was created from branch feat/release-readiness-integrated-acceptance against exact base 26ba5f5d1c7e167310755203383067305ac2a338. The implementation head immediately before this one-time PR-number alignment was 90ff24e8c9d75c75e48e4be3ff590dadab3faf1b.
+The exact post-merge gate passed mobile JVM tests, Wear protocol/Wear JVM tests, semantic Room schema verification, generated Room schema upload, API 35 mobile connected tests (including `ReleaseIntegratedAcceptanceTest`), mobile lint, Wear/protocol lint, phone debug/release APK builds, phone release AAB build, Wear debug/release APK builds, release metadata verification, every expected upload, and Wear OS connected instrumentation.
 
-This documentation alignment is intentionally performed once before the final exact-head CI gate. The exact current PR head, CI run, artifacts, mergeability, reviews/comments/threads and final audit must always be verified directly in GitHub; do not create a documentation-only retry loop merely to chase CI.
+Post-merge artifacts on exact squash `0122cf0fb557e10de51e6e3fbf0cf75b15d74957`:
 
-**Do not merge the Issue #23 PR without explicit user approval. Do not advance to another issue while #23 is open.**
+- `gymtracker-room-schema` — `9624727591`;
+- `gymtracker-debug-apk` — `9624955234`;
+- `gymtracker-release-apk` — `9624955800`;
+- `gymtracker-release-unsigned-aab` — `9624956414`;
+- `gymtracker-release-metadata` — `9624956767`;
+- `gymtracker-wear-debug-apk` — `9624957735`;
+- `gymtracker-wear-release-apk` — `9624958143`.
+
+### Release configuration locked by Issue #23
+
+Release candidate: **1.0.0-rc1**.
+
+- Application ID: `com.germanchoconta.gymtracker`.
+- Phone: versionCode `1`, versionName `1.0.0-rc1`.
+- Wear: versionCode `10001`, versionName `1.0.0-rc1`.
+- Phone release APK: **unsigned**.
+- Phone release AAB: **unsigned**.
+- Wear release APK: **unsigned**.
+- No production signing material belongs in this public repository.
+
+These CI outputs are build/acceptance evidence only. GymTracker is **code-level RC ready, not distribution-ready** until the external signing/store/policy/distribution steps are completed.
+
+### Final product / schema / privacy contract
+
+The completed integrated gate preserves:
+
+- Phone Room as the only canonical workout/history truth.
+- Room database version **2** with committed schemas **1.json** and **2.json only**; no schema v3.
+- Product loop **LOG → COMPARE → UNDERSTAND → PROGRESS**.
+- Logger principle **PREVIOUS + TARGET + TODAY**.
+- Deterministic progression recommendations as derived, transparent and recalculable output.
+- Explicit Apply only; Apply updates only TODAY load through canonical autosave.
+- Apply does not mutate reps, RIR, set type, completedAt, finished history, or routine TARGET.
+- `PersonalRecordEngine` remains the canonical Epley/e1RM implementation.
+- Health Connect remains optional/read-only and does not control prescription.
+- Wear remains a phone-canonical companion, not a second history source or progression engine.
+- Backup/restore/CSV semantics remain unchanged.
+- No Pulso / pulso-finanzas scope.
+- Tests/fixtures remain synthetic and non-identifying.
+- No real workout/health/sleep/HR/RHR/HRV data, private exports/backups, credentials, tokens, secrets, keystores, signing keys or upload keys are permitted in the repository.
+
+### Backlog / tag / release checkpoint after merge
+
+The post-merge verification found:
+
+- **0 open issues**;
+- **0 open pull requests**;
+- no existing `v1.0.0-rc1` ref or equivalent `v1.0.0` / `1.0.0` tag namespace;
+- **0 GitHub Releases**;
+- no GitHub Release for `v1.0.0-rc1`.
+
+No new issue is needed for the one-time final documentation alignment, and no new feature work should begin as part of this checkpoint.
+
+### One-time final documentation alignment
+
+This alignment updates only `README.md` and `PROJECT_CONTEXT.md` to replace pre-merge Issue #23 / PR #24 wording with the verified final state above. It does **not** change application code, CI workflow, build configuration, Room schemas, migrations, permissions, backup/CSV formats, Wear protocol, Health Connect behavior, progression semantics or any product behavior.
+
+Do not create a self-referential documentation commit loop merely to write the documentation commit's own SHA into itself. After this single alignment commit, verify its exact `main` SHA/tree/parent and the CI GitHub actually creates for that head directly from GitHub. That verified aligned `main` is the only candidate target for a future `v1.0.0-rc1` tag/prerelease after explicit approval.
+
+**No tag or GitHub Release is authorized by this documentation alignment.**

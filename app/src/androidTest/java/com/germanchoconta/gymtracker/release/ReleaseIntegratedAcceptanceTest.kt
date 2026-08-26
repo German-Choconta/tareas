@@ -167,7 +167,7 @@ class ReleaseIntegratedAcceptanceTest {
         assertEquals(ProgressionAction.INCREASE_LOAD, recoveredSet.progression?.action)
 
         val routineTargetBeforeApply = routineRepository.getExercises(routine.id).single()
-        val historyBeforeApply = historyRepository.prFacts(exercise.id)
+        val recordsBeforeApply = historyRepository.records(exercise.id)
         recoveredLogger.applySuggestedLoad(recoveredSet.id)
         val applied = waitForSet(recoveredExercise.id) { it.loadGrams == 42_500L }
 
@@ -176,7 +176,11 @@ class ReleaseIntegratedAcceptanceTest {
         assertEquals(SetTypes.WORK, applied.type)
         assertNull(applied.completedAt)
         assertEquals(routineTargetBeforeApply, routineRepository.getExercises(routine.id).single())
-        assertEquals(historyBeforeApply, historyRepository.prFacts(exercise.id))
+        assertEquals(recordsBeforeApply, historyRepository.records(exercise.id))
+        val baselineAfterApply = sourceDb.workoutDao().getSet(baselineSet.id)
+        assertEquals(40_000L, baselineAfterApply?.loadGrams)
+        assertEquals(10, baselineAfterApply?.reps)
+        assertEquals(20, baselineAfterApply?.rirTenths)
         val currentSnapshot = workoutRepository.getWorkoutExercise(recoveredExercise.id)
         assertEquals(6, currentSnapshot?.repMin)
         assertEquals(10, currentSnapshot?.repMax)
@@ -199,7 +203,7 @@ class ReleaseIntegratedAcceptanceTest {
         assertNull(workoutRepository.getActiveWorkout())
 
         val finishedHistory = sourceDb.historyDao().observeExercisesWithFinishedHistory().first()
-        assertEquals(2, finishedHistory.single().sessionCount)
+        assertEquals(2L, finishedHistory.single().sessionCount)
         val finalRecords = historyRepository.records(exercise.id)
         assertEquals(42_500L, finalRecords.heaviestLoad?.fact?.loadGrams)
         assertNotNull(finalRecords.estimatedOneRepMax)

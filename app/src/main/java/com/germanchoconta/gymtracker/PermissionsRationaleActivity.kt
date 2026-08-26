@@ -13,8 +13,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import com.germanchoconta.gymtracker.ui.theme.GymTrackerTheme
 
@@ -22,6 +24,7 @@ class PermissionsRationaleActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            val uriHandler = LocalUriHandler.current
             GymTrackerTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     Column(
@@ -50,6 +53,12 @@ class PermissionsRationaleActivity : ComponentActivity() {
                         Text(
                             "Si varias aplicaciones aportan un mismo tipo de dato, GymTracker mantiene sus orígenes separados en lugar de inventar una deduplicación entre fuentes.",
                         )
+                        TextButton(
+                            onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) },
+                            modifier = Modifier.minimumInteractiveComponentSize(),
+                        ) {
+                            Text("Política de privacidad completa")
+                        }
                         Button(
                             onClick = ::finish,
                             modifier = Modifier.minimumInteractiveComponentSize(),

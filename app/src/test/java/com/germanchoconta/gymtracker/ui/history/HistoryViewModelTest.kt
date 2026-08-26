@@ -8,6 +8,7 @@ import com.germanchoconta.gymtracker.data.local.HistoryExerciseRow
 import com.germanchoconta.gymtracker.data.local.HistoryRepository
 import com.germanchoconta.gymtracker.data.local.HistorySetRow
 import com.germanchoconta.gymtracker.data.local.PrFactRow
+import com.germanchoconta.gymtracker.data.local.ProgressionObservationRow
 import com.germanchoconta.gymtracker.domain.FrequencyBucketSize
 import com.germanchoconta.gymtracker.domain.ProgressMetric
 import java.time.LocalDate
@@ -247,5 +248,11 @@ class HistoryViewModelTest {
             rangeQueryCount++
             return facts.filter { it.startedAt >= startInclusive && it.startedAt < endExclusive }
         }
+
+        override suspend fun getProgressionObservations(
+            exerciseId: String,
+            beforeStartedAt: Long,
+            routineId: String?,
+        ): List<ProgressionObservationRow> = emptyList()
     }
 }
